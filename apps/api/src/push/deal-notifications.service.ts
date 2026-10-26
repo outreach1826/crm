@@ -119,10 +119,10 @@ export class DealNotifications {
 	}
 
 	private run(work: () => Promise<void>): Promise<void> {
-		return work().catch((error: unknown) => {
+		return work().catch((error: Error) => {
 			this.logger.warn({
 				message: "Deal notification failed",
-				error: error instanceof Error ? error.message : String(error),
+				error: error.message,
 			});
 		});
 	}

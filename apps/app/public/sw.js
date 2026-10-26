@@ -16,13 +16,7 @@ self.addEventListener("activate", (event) => {
 function readMessage(event) {
 	if (!event.data) return FALLBACK;
 	try {
-		const data = event.data.json();
-		return {
-			title: typeof data.title === "string" ? data.title : FALLBACK.title,
-			body: typeof data.body === "string" ? data.body : FALLBACK.body,
-			url: typeof data.url === "string" ? data.url : FALLBACK.url,
-			tag: typeof data.tag === "string" ? data.tag : FALLBACK.tag,
-		};
+		return { ...FALLBACK, ...event.data.json() };
 	} catch {
 		return { ...FALLBACK, body: event.data.text() };
 	}

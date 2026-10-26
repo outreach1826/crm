@@ -83,10 +83,10 @@ export class PushService {
 	}
 
 	notify(audience: PushAudience, message: PushMessage): void {
-		void this.deliver(audience, message).catch((error: unknown) => {
+		void this.deliver(audience, message).catch((error: Error) => {
 			this.logger.warn({
 				message: "Push delivery failed",
-				error: error instanceof Error ? error.message : String(error),
+				error: error.message,
 			});
 		});
 	}
