@@ -19,6 +19,8 @@ const ANONYMOUS = ["/t"];
 
 const SECTIONS = ["/companies", "/contacts", "/deals", "/settings"];
 
+const HIDDEN_SECTIONS = ["/chat", "/agents"];
+
 export async function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
@@ -48,7 +50,11 @@ export async function proxy(request: NextRequest) {
 }
 
 function appPath(pathname: string, slug: string): string {
-	if (pathname === LANDING_PATH || isSetup(pathname)) {
+	if (
+		pathname === LANDING_PATH ||
+		isSetup(pathname) ||
+		isHidden(pathname, slug)
+	) {
 		return workspaceUrl(slug);
 	}
 
@@ -65,6 +71,13 @@ function appPath(pathname: string, slug: string): string {
 
 function isUnder(pathname: string, prefix: string): boolean {
 	return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isHidden(pathname: string, slug: string): boolean {
+	return HIDDEN_SECTIONS.some(
+		(section) =>
+			isUnder(pathname, section) || isUnder(pathname, `/${slug}${section}`),
+	);
 }
 
 function isPublic(pathname: string): boolean {

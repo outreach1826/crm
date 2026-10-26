@@ -86,24 +86,6 @@ async function SignIn({
 				? configured
 				: [];
 
-	if (!showSso && social.length === 0) {
-		return (
-			<>
-				<AuthHeading
-					title="No way in yet"
-					description="This CRM has no sign-in method configured, so nobody can get in — including you."
-				/>
-
-				<p className="text-center text-muted-foreground text-sm/5">
-					Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET — or MICROSOFT_CLIENT_ID
-					and MICROSOFT_CLIENT_SECRET — in the root .env file and restart. Your
-					own identity provider can be added from Settings once somebody is
-					signed in.
-				</p>
-			</>
-		);
-	}
-
 	return (
 		<>
 			<AuthHeading

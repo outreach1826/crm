@@ -322,6 +322,25 @@ describe("the slug the app is served under", () => {
 		).toBeNull();
 	});
 
+	it("sends a rep off the hidden chat pages and into the workspace", async () => {
+		setup();
+
+		expect(
+			redirectedTo(await proxy(request(`/${SLUG}/chat`, [SESSION_COOKIE]))),
+		).toBe(`/${SLUG}`);
+		expect(
+			redirectedTo(
+				await proxy(request(`/${SLUG}/chat/abc123`, [SESSION_COOKIE])),
+			),
+		).toBe(`/${SLUG}`);
+		expect(
+			redirectedTo(await proxy(request(`/${SLUG}/agents`, [SESSION_COOKIE]))),
+		).toBe(`/${SLUG}`);
+		expect(
+			redirectedTo(await proxy(request("/chat", [SESSION_COOKIE]))),
+		).toBe(`/${SLUG}`);
+	});
+
 	it("rewrites nothing when the API could not say what the slug is", async () => {
 		setup({ slug: "" });
 
