@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AuthHeading, AuthShell } from "@/components/auth-shell";
 import { getSession } from "@/lib/session";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
+import { PasswordSignIn } from "./password-sign-in";
 import { SocialSignIn } from "./social-sign-in";
 import { type SsoProvider, SsoSignIn } from "./sso-sign-in";
 
@@ -109,6 +110,8 @@ async function SignIn({
 				title="Welcome back"
 				description="Sign in with your account to continue."
 			/>
+
+			<PasswordSignIn />
 
 			{showSso ? <SsoSignIn providers={providers} /> : null}
 			{social.map((provider) => (
