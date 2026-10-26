@@ -336,9 +336,9 @@ describe("the slug the app is served under", () => {
 		expect(
 			redirectedTo(await proxy(request(`/${SLUG}/agents`, [SESSION_COOKIE]))),
 		).toBe(`/${SLUG}`);
-		expect(
-			redirectedTo(await proxy(request("/chat", [SESSION_COOKIE]))),
-		).toBe(`/${SLUG}`);
+		expect(redirectedTo(await proxy(request("/chat", [SESSION_COOKIE])))).toBe(
+			`/${SLUG}`,
+		);
 	});
 
 	it("rewrites nothing when the API could not say what the slug is", async () => {
