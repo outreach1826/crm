@@ -111,6 +111,20 @@ export class EnvironmentVariables {
 	BLOB_READ_WRITE_TOKEN?: string;
 
 	@IsOptional()
+	@IsString()
+	VAPID_PUBLIC_KEY?: string;
+
+	@IsOptional()
+	@IsString()
+	VAPID_PRIVATE_KEY?: string;
+
+	@IsOptional()
+	@Matches(/^(mailto:|https:\/\/)/, {
+		message: "VAPID_SUBJECT must be a mailto: address or an https:// URL.",
+	})
+	VAPID_SUBJECT?: string;
+
+	@IsOptional()
 	@IsUrl(
 		{ require_tld: false, require_protocol: true },
 		{

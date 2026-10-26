@@ -9,6 +9,7 @@ import { DashboardService } from "../src/dashboard/dashboard.service";
 import { DealsService } from "../src/deals/deals.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
+import { silentDealNotifications } from "./deal-notifications.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "currency-totals-spec";
 const userId = `user-${suffix}`;
@@ -25,6 +26,7 @@ const deals = new DealsService(
 	new ActivityStampService(db),
 	conversion,
 	new FieldsService(db, { fieldBackfill: async () => undefined } as never),
+	silentDealNotifications,
 );
 const dashboard = new DashboardService(db, conversion);
 

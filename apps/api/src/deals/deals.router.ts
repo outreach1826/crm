@@ -75,8 +75,11 @@ export class DealsRouter {
 		output: dealCreateOutput,
 		meta: restMeta("POST", "/deals", ["Deals"]),
 	})
-	async create(@Input() input: z.infer<typeof dealCreateInput>) {
-		return this.deals.create(input);
+	async create(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof dealCreateInput>,
+	) {
+		return this.deals.create(input, ctx.user.id);
 	}
 
 	@Mutation({
@@ -84,8 +87,11 @@ export class DealsRouter {
 		output: dealMutateOutput,
 		meta: restMeta("PATCH", "/deals/{id}", ["Deals"]),
 	})
-	async update(@Input() input: z.infer<typeof dealUpdateArgs>) {
-		return this.deals.update(input.id, input.data);
+	async update(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof dealUpdateArgs>,
+	) {
+		return this.deals.update(input.id, input.data, ctx.user.id);
 	}
 
 	@Mutation({
@@ -170,8 +176,11 @@ export class DealsRouter {
 		output: dealBulkResultOutput,
 		meta: restMeta("POST", "/deals/bulk-assign-owner", ["Deals"]),
 	})
-	async bulkAssignOwner(@Input() input: z.infer<typeof dealBulkOwnerInput>) {
-		return this.deals.bulkAssignOwner(input);
+	async bulkAssignOwner(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof dealBulkOwnerInput>,
+	) {
+		return this.deals.bulkAssignOwner(input, ctx.user.id);
 	}
 
 	@Mutation({

@@ -35,6 +35,7 @@ import {
 import { ConversionService } from "../currency/conversion.service";
 import { InjectDatabase } from "../database/database.constants";
 import { FieldsService } from "../fields/fields.service";
+import { DealNotifications } from "../push/deal-notifications.service";
 import {
 	archivedFilter,
 	countsByKey,
@@ -111,6 +112,7 @@ export class DealsService {
 		private readonly stamp: ActivityStampService,
 		private readonly conversion: ConversionService,
 		private readonly fields: FieldsService,
+		private readonly notifications: DealNotifications,
 	) {}
 
 	async list(input: DealListInput) {
@@ -332,7 +334,7 @@ export class DealsService {
 		};
 	}
 
-	async create(input: DealCreateInput) {
+	async create(input: DealCreateInput, actorId: string | null = null) {
 		const stage = input.stage ?? "DEMO_BOOKED";
 		const closed = isClosedStage(stage);
 		const now = new Date();
@@ -382,6 +384,7 @@ export class DealsService {
 			this.logger.log({ message: "Deal created", dealId: deal.id, stage });
 
 			void this.fields.queueBackfillForNewRecord("DEAL", deal.id);
+			void this.notifications.created(deal.id, actorId);
 
 			return deal;
 		} catch (error) {
@@ -389,8 +392,21 @@ export class DealsService {
 		}
 	}
 
-	async update(id: string, input: DealUpdateInput) {
+	async update(
+		id: string,
+		input: DealUpdateInput,
+		actorId: string | null = null,
+	) {
 		const data: Prisma.DealUpdateInput = {};
+		const previousOwnerId =
+			input.ownerId === undefined
+				? undefined
+				: (
+						await this.db.deal.findUnique({
+							where: { id },
+							select: { ownerId: true },
+						})
+					)?.ownerId;
 
 		if (input.name !== undefined) data.name = input.name.trim();
 		if (input.description !== undefined) {
@@ -436,7 +452,7 @@ export class DealsService {
 		}
 
 		try {
-			return await this.db.$transaction(async (tx) => {
+			const updated = await this.db.$transaction(async (tx) => {
 				if (input.fields) {
 					await this.fields.applyValues(tx, "DEAL", id, input.fields);
 				}
@@ -447,6 +463,12 @@ export class DealsService {
 					select: { id: true, name: true },
 				});
 			});
+
+			if (input.ownerId !== undefined && input.ownerId !== previousOwnerId) {
+				void this.notifications.assigned(id, input.ownerId, actorId);
+			}
+
+			return updated;
 		} catch (error) {
 			throw this.translate(error, id);
 		}
@@ -655,6 +677,8 @@ export class DealsService {
 			to: input.stage,
 		});
 
+		void this.notifications.stageChanged(deal.id, input.stage, actingUserId);
+
 		return { ...updated, changed: true };
 	}
 
@@ -751,7 +775,10 @@ export class DealsService {
 		return { dealId: input.dealId, contactId: input.contactId, role };
 	}
 
-	async bulkAssignOwner(input: DealBulkOwnerInput): Promise<BulkResult> {
+	async bulkAssignOwner(
+		input: DealBulkOwnerInput,
+		actorId: string | null = null,
+	): Promise<BulkResult> {
 		await requireOwner(this.db, input.ownerId);
 
 		const ids = [...new Set(input.ids)];
@@ -765,6 +792,8 @@ export class DealsService {
 			count,
 			ownerId: input.ownerId,
 		});
+
+		void this.notifications.bulkAssigned(input.ownerId, count, actorId);
 
 		return {
 			requested: ids.length,

@@ -18,6 +18,7 @@ import { ConversionService } from "../src/currency/conversion.service";
 import { DealsService } from "../src/deals/deals.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
+import { silentDealNotifications } from "./deal-notifications.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "fields-spec";
 const domain = `fields-${suffix}.test`;
@@ -68,7 +69,14 @@ const contacts = new ContactsService(
 	stamp,
 	fields,
 );
-const deals = new DealsService(db, agent, stamp, conversion, fields);
+const deals = new DealsService(
+	db,
+	agent,
+	stamp,
+	conversion,
+	fields,
+	silentDealNotifications,
+);
 
 let companyId: string;
 let bridgeSecret: string | undefined;

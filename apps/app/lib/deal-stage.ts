@@ -1,3 +1,4 @@
+import { DEAL_STAGE_LABELS } from "@crm/db/deal-stage";
 import { DealStage } from "@crm/db/enums";
 import type { StatusTone } from "@crm/ui/components/status-indicator";
 
@@ -17,13 +18,19 @@ type DealStagePresentation = Record<
 >;
 
 const PRESENTATION: DealStagePresentation = {
-	DEMO_BOOKED: { label: "Demo booked", tone: "neutral" },
-	QUALIFIED_TO_BUY: { label: "Qualified to buy", tone: "info" },
-	DECISION_MAKER_BOUGHT_IN: { label: "Decision maker in", tone: "info" },
-	CONTRACT_SENT: { label: "Contract sent", tone: "warning" },
-	CLOSED_WON: { label: "Closed won", tone: "success" },
-	CLOSED_LOST: { label: "Closed lost", tone: "error" },
-	UNQUALIFIED_TO_BUY: { label: "Unqualified", tone: "neutral" },
+	DEMO_BOOKED: { label: DEAL_STAGE_LABELS.DEMO_BOOKED, tone: "neutral" },
+	QUALIFIED_TO_BUY: { label: DEAL_STAGE_LABELS.QUALIFIED_TO_BUY, tone: "info" },
+	DECISION_MAKER_BOUGHT_IN: {
+		label: DEAL_STAGE_LABELS.DECISION_MAKER_BOUGHT_IN,
+		tone: "info",
+	},
+	CONTRACT_SENT: { label: DEAL_STAGE_LABELS.CONTRACT_SENT, tone: "warning" },
+	CLOSED_WON: { label: DEAL_STAGE_LABELS.CLOSED_WON, tone: "success" },
+	CLOSED_LOST: { label: DEAL_STAGE_LABELS.CLOSED_LOST, tone: "error" },
+	UNQUALIFIED_TO_BUY: {
+		label: DEAL_STAGE_LABELS.UNQUALIFIED_TO_BUY,
+		tone: "neutral",
+	},
 };
 
 export const OPEN_STAGES = ORDER.slice(0, 4) as readonly DealStage[];
