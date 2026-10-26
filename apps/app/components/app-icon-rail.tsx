@@ -9,7 +9,6 @@ import UserMultiple from "@carbon/icons-react/es/UserMultiple";
 import { Button } from "@crm/ui/components/button";
 import type { CarbonIcon } from "@crm/ui/components/icon";
 import { Icon } from "@crm/ui/components/icon";
-import Bot from "@crm/ui/components/icons/bot";
 import {
 	Sheet,
 	SheetContent,
@@ -41,14 +40,6 @@ type RailItem = {
 
 const ITEMS: RailItem[] = [
 	{ title: "Overview", href: "/", icon: Dashboard, match: "exact" },
-	{
-		title: "Chat",
-		href: "/chat",
-		icon: Bot,
-		iconClassName: "size-5",
-		match: "prefix",
-		related: ["/agents"],
-	},
 	{ title: "Companies", href: "/companies", icon: Building, match: "prefix" },
 	{
 		title: "Contacts",
