@@ -107,6 +107,10 @@ export const auth = betterAuth({
 	advanced: {
 		cookiePrefix: AUTH_COOKIE_PREFIX,
 
+		ipAddress: {
+			ipAddressHeaders: ["x-client-ip"],
+		},
+
 		useSecureCookies: env.isProduction,
 		...(env.cookieDomain && {
 			crossSubDomainCookies: {
