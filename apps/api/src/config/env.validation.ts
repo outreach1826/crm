@@ -28,6 +28,10 @@ export class EnvironmentVariables {
 	@Max(65535)
 	PORT = 3001;
 
+	@IsOptional()
+	@IsString()
+	API_HOST?: string;
+
 	@IsString()
 	@MinLength(1, {
 		message:
