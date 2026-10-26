@@ -122,9 +122,7 @@ describe("DealsService.board", () => {
 		const board = await deals.board({ owner: [userId] });
 		const cardIds = board.cards.map((card) => card.id).sort();
 
-		expect(cardIds).toEqual(
-			[ids.converted, ids.unconverted, ids.won].sort(),
-		);
+		expect(cardIds).toEqual([ids.converted, ids.unconverted, ids.won].sort());
 		expect(board.truncated).toBe(false);
 	});
 

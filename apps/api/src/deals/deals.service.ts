@@ -45,7 +45,6 @@ import {
 	paginate,
 	resolveOrderBy,
 } from "../trpc/list-input";
-import { DEALS } from "./deals-config";
 import type {
 	ClosingWindow,
 	DealAttachContactInput,
@@ -60,6 +59,7 @@ import type {
 	SetStageInput,
 } from "./deals.contracts";
 import { CLOSING_WINDOWS } from "./deals.contracts";
+import { DEALS } from "./deals-config";
 
 const OWNER_SELECT = {
 	id: true,
