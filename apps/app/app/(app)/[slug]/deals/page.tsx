@@ -10,12 +10,18 @@ import {
 	PageShellLoading,
 	PageShellTitle,
 } from "@/components/page-shell";
+import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { CreateDealSheet } from "./create-deal-sheet";
 import { dealsSearchParams } from "./deals-search-params";
-import { DealsTable } from "./deals-table";
+import {
+	DealsView,
+	DealsViewToggle,
+	DealsViewToggleFallback,
+} from "./deals-view";
+import { DEALS_BOARD_INPUT, loadDealsViewParams } from "./deals-view-params";
 
 export const metadata: Metadata = {
 	title: "Deals",
@@ -34,6 +40,9 @@ export default function DealsPage({
 					</PageShellDescription>
 				</PageShellHeading>
 				<PageShellActions>
+					<Suspense fallback={<DealsViewToggleFallback />}>
+						<DealsViewToggle />
+					</Suspense>
 					<CreateDealSheet />
 				</PageShellActions>
 			</PageShellHeader>
@@ -50,24 +59,29 @@ export default function DealsPage({
 async function Deals({
 	searchParams,
 }: Pick<PageProps<"/[slug]/deals">, "searchParams">) {
-	const [, values] = await Promise.all([
+	const [, values, viewValues] = await Promise.all([
 		requireSession(),
 		dealsSearchParams.load(searchParams),
+		loadDealsViewParams(searchParams),
 	]);
 
 	const trpc = getServerTrpc();
 	const queryClient = getServerQueryClient();
 	await Promise.all([
-		queryClient.prefetchQuery(
-			trpc.deals.list.queryOptions(dealsSearchParams.toInput(values)),
-		),
+		viewValues[SEARCH_PARAM.deals.view] === "board"
+			? queryClient.prefetchQuery(
+					trpc.deals.board.queryOptions(DEALS_BOARD_INPUT),
+				)
+			: queryClient.prefetchQuery(
+					trpc.deals.list.queryOptions(dealsSearchParams.toInput(values)),
+				),
 		queryClient.prefetchQuery(trpc.users.list.queryOptions()),
 		queryClient.prefetchQuery(trpc.companies.options.queryOptions({ q: "" })),
 	]);
 
 	return (
 		<HydrateClient>
-			<DealsTable />
+			<DealsView />
 		</HydrateClient>
 	);
 }

@@ -52,6 +52,34 @@ function useStageMutation(onDone?: () => void) {
 	);
 }
 
+export type StageChangeResult = "unchanged" | "needs-reason" | "saving";
+
+export function useChangeDealStage() {
+	const [, setCloseParams] = useQueryStates(closeReasonParams);
+	const setStage = useStageMutation();
+
+	return {
+		pending: setStage.isPending,
+		change(
+			dealId: string,
+			from: DealStage,
+			to: DealStage,
+			onFailed?: () => void,
+		): StageChangeResult {
+			if (to === from) return "unchanged";
+			if (LOSING_STAGES.includes(to)) {
+				void setCloseParams({
+					[SEARCH_PARAM.dialog.closeDeal]: dealId,
+					[SEARCH_PARAM.dialog.closeStage]: to,
+				});
+				return "needs-reason";
+			}
+			setStage.mutate({ id: dealId, stage: to }, { onError: onFailed });
+			return "saving";
+		},
+	};
+}
+
 export function DealStageMenu({
 	dealId,
 	stage,
@@ -61,8 +89,7 @@ export function DealStageMenu({
 	stage: DealStage;
 	variant?: "inline" | "control";
 }) {
-	const [, setCloseParams] = useQueryStates(closeReasonParams);
-	const setStage = useStageMutation();
+	const stageChange = useChangeDealStage();
 
 	return (
 		<DropdownMenu>
@@ -71,7 +98,7 @@ export function DealStageMenu({
 					<Button
 						variant="outline"
 						size="sm"
-						disabled={setStage.isPending}
+						disabled={stageChange.pending}
 						onClick={(event) => event.stopPropagation()}
 					>
 						<DealStageIndicator stage={stage} className="text-foreground" />
@@ -81,7 +108,7 @@ export function DealStageMenu({
 					<button
 						type="button"
 						onClick={(event) => event.stopPropagation()}
-						disabled={setStage.isPending}
+						disabled={stageChange.pending}
 						className="flex min-w-0 items-center text-left hover:text-foreground disabled:opacity-50"
 					>
 						<DealStageIndicator stage={stage} />
@@ -96,16 +123,7 @@ export function DealStageMenu({
 				<DropdownMenuRadioGroup
 					value={stage}
 					onValueChange={(next) => {
-						const chosen = next as DealStage;
-						if (chosen === stage) return;
-						if (LOSING_STAGES.includes(chosen)) {
-							void setCloseParams({
-								[SEARCH_PARAM.dialog.closeDeal]: dealId,
-								[SEARCH_PARAM.dialog.closeStage]: chosen,
-							});
-							return;
-						}
-						setStage.mutate({ id: dealId, stage: chosen });
+						stageChange.change(dealId, stage, next as DealStage);
 					}}
 				>
 					{DEAL_STAGE_OPTIONS.map((option) => (
