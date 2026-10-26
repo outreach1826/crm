@@ -24,6 +24,7 @@ import { PageShellLoading } from "@/components/page-shell";
 import { DEAL_STAGE_OPTIONS, dealStageLabel } from "@/lib/deal-stage";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
+import { DealsFollowUp } from "./deals-follow-up";
 import { DEALS_BOARD_INPUT } from "./deals-view-params";
 
 type Board = RouterOutputs["deals"]["board"];
@@ -164,7 +165,9 @@ export function DealsBoard() {
 	};
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-2">
+		<div className="flex h-full min-h-0 flex-col gap-3">
+			<DealsFollowUp cards={cards} />
+
 			<KanbanBoard
 				className="flex-1"
 				onMove={move}
