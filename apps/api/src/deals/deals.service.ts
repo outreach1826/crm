@@ -45,9 +45,11 @@ import {
 	paginate,
 	resolveOrderBy,
 } from "../trpc/list-input";
+import { DEALS } from "./deals-config";
 import type {
 	ClosingWindow,
 	DealAttachContactInput,
+	DealBoardInput,
 	DealBulkOwnerInput,
 	DealBulkStageInput,
 	DealContactRoleInput,
@@ -188,6 +190,86 @@ export class DealsService {
 			openValueCents: number | null;
 			reportingCurrency: string;
 			unconverted: { count: number; currencies: string[] };
+		};
+	}
+
+	async board(input: DealBoardInput) {
+		const where: Prisma.DealWhereInput = {
+			AND: [archivedFilter(false), ownerFilter(input.owner) ?? {}],
+		};
+		const base = await this.conversion.reportingCurrency();
+		const max = DEALS.board.maxCards;
+
+		const [cards, counts, sums, unconverted] = await Promise.all([
+			this.db.deal.findMany({
+				where,
+				take: max + 1,
+				orderBy: [{ stageChangedAt: "desc" }, { createdAt: "desc" }],
+				select: {
+					id: true,
+					name: true,
+					stage: true,
+					amount: true,
+					currency: true,
+					baseAmount: true,
+					expectedCloseDate: true,
+					lastActivityAt: true,
+					stageChangedAt: true,
+					createdAt: true,
+					company: { select: COMPANY_SELECT },
+					owner: { select: OWNER_SELECT },
+				},
+			}),
+			this.db.deal.groupBy({
+				by: ["stage"],
+				where,
+				_count: { _all: true },
+			}),
+			this.db.deal.groupBy({
+				by: ["stage"],
+				where: { AND: [where, this.conversion.countedWhere(base)] },
+				_sum: { baseAmount: true },
+			}),
+			this.conversion.unconverted(where),
+		]);
+
+		const countByStage = new Map(
+			counts.map((group) => [group.stage, group._count._all]),
+		);
+		const sumByStage = new Map(
+			sums.map((group) => [group.stage, group._sum.baseAmount]),
+		);
+
+		return {
+			cards: cards
+				.slice(0, max)
+				.map(
+					({
+						amount,
+						baseAmount,
+						expectedCloseDate,
+						lastActivityAt,
+						stageChangedAt,
+						createdAt,
+						...card
+					}) => ({
+						...card,
+						amountCents: toCents(amount),
+						baseAmountCents: toCents(baseAmount),
+						expectedCloseDate: expectedCloseDate?.toISOString() ?? null,
+						lastActivityAt: lastActivityAt?.toISOString() ?? null,
+						stageChangedAt: stageChangedAt.toISOString(),
+						createdAt: createdAt.toISOString(),
+					}),
+				),
+			columns: [...OPEN_DEAL_STAGES, ...CLOSED_DEAL_STAGES].map((stage) => ({
+				stage,
+				count: countByStage.get(stage) ?? 0,
+				valueCents: toCents(sumByStage.get(stage) ?? null),
+			})),
+			truncated: cards.length > max,
+			reportingCurrency: base,
+			unconverted,
 		};
 	}
 

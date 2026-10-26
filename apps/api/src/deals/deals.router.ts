@@ -13,6 +13,8 @@ import { AuthMiddleware } from "../trpc/middlewares/auth.middleware";
 import { restMeta } from "../trpc/openapi";
 import {
 	dealAttachContactInput,
+	dealBoardInput,
+	dealBoardOutput,
 	dealBulkInput,
 	dealBulkOwnerInput,
 	dealBulkResultOutput,
@@ -48,6 +50,15 @@ export class DealsRouter {
 	})
 	async list(@Input() input: z.infer<typeof dealListInput>) {
 		return this.deals.list(input);
+	}
+
+	@Query({
+		input: dealBoardInput,
+		output: dealBoardOutput,
+		meta: restMeta("POST", "/deals/board", ["Deals"]),
+	})
+	async board(@Input() input: z.infer<typeof dealBoardInput>) {
+		return this.deals.board(input);
 	}
 
 	@Query({

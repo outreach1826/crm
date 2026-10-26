@@ -224,6 +224,44 @@ export const dealListOutput = z.object({
 
 export type DealListResult = z.infer<typeof dealListOutput>;
 
+export const dealBoardInput = z.object({
+	owner: z.array(z.string()).default([]),
+});
+
+export type DealBoardInput = z.infer<typeof dealBoardInput>;
+
+const dealBoardCardOutput = z.object({
+	id: z.string(),
+	name: z.string(),
+	stage: stageEnum,
+	currency: z.string(),
+	company: dealCompanyOutput,
+	owner: dealOwnerOutput,
+	amountCents: z.number().nullable(),
+	baseAmountCents: z.number().nullable(),
+	expectedCloseDate: z.string().nullable(),
+	lastActivityAt: z.string().nullable(),
+	stageChangedAt: z.string(),
+	createdAt: z.string(),
+});
+
+export const dealBoardOutput = z.object({
+	cards: z.array(dealBoardCardOutput),
+	columns: z.array(
+		z.object({
+			stage: stageEnum,
+			count: z.number(),
+			valueCents: z.number().nullable(),
+		}),
+	),
+	truncated: z.boolean(),
+	reportingCurrency: z.string(),
+	unconverted: z.object({
+		count: z.number(),
+		currencies: z.array(z.string()),
+	}),
+});
+
 export const dealDetailOutput = z.object({
 	id: z.string(),
 	name: z.string(),
