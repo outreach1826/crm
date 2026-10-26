@@ -31,7 +31,7 @@ export default function DealsPage({
 	searchParams,
 }: PageProps<"/[slug]/deals">) {
 	return (
-		<PageShell className="min-h-0">
+		<PageShell className="min-h-0" wide>
 			<PageShellHeader>
 				<PageShellHeading>
 					<PageShellTitle>Deals</PageShellTitle>

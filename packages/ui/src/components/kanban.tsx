@@ -123,7 +123,7 @@ function KanbanColumn({
 			data-over={isOver}
 			aria-label={label}
 			className={cn(
-				"flex max-h-full w-72 shrink-0 flex-col rounded-lg border bg-muted/40 data-[over=true]:bg-muted data-[over=true]:ring-2 data-[over=true]:ring-ring",
+				"flex max-h-full min-w-60 flex-1 basis-60 flex-col rounded-lg border bg-muted/40 data-[over=true]:bg-muted data-[over=true]:ring-2 data-[over=true]:ring-ring",
 				className,
 			)}
 		>

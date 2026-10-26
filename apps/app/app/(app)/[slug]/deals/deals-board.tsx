@@ -125,7 +125,7 @@ function DealCard({ card }: { card: BoardCard }) {
 
 function DragPreview({ card }: { card: BoardCard }) {
 	return (
-		<div className="flex w-72 flex-col gap-2 rounded-lg border bg-card p-3 text-sm shadow-md">
+		<div className="flex w-60 flex-col gap-2 rounded-lg border bg-card p-3 text-sm shadow-md">
 			<span className="truncate font-medium">{card.name}</span>
 			<CompanyCell company={card.company} />
 		</div>
