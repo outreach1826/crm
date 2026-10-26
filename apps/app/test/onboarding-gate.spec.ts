@@ -143,6 +143,12 @@ describe("proxy", () => {
 		);
 	});
 
+	it("serves the service worker to a signed-out device", async () => {
+		marketing(undefined);
+
+		expect(redirectedTo(await proxy(request("/sw.js")))).toBeNull();
+	});
+
 	it("sends a stranger to sign in when the install has no landing page", async () => {
 		marketing(undefined);
 

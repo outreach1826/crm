@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { LocalDateTimeHydrator } from "@/components/local-date-time";
+import { ServiceWorker } from "@/components/service-worker";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TRPCReactProvider } from "@/lib/trpc/client";
 
@@ -21,10 +22,16 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
 	title: {
-		default: "Comp AI - CRM",
-		template: "%s · Comp AI CRM",
+		default: "7crawl CRM",
+		template: "%s · 7crawl CRM",
 	},
-	description: "Customer Relationship Management for Comp AI",
+	description: "The 7crawl sales pipeline.",
+	applicationName: "7crawl CRM",
+	appleWebApp: {
+		capable: true,
+		title: "7crawl CRM",
+		statusBarStyle: "default",
+	},
 	icons: {
 		icon: [
 			{ url: "/favicon.svg", type: "image/svg+xml" },
@@ -56,6 +63,7 @@ export default function RootLayout({
 					</TRPCReactProvider>
 				</NuqsAdapter>
 				<LocalDateTimeHydrator />
+				<ServiceWorker />
 			</body>
 		</html>
 	);

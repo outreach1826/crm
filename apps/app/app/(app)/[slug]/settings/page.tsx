@@ -15,6 +15,7 @@ import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { AgentModel } from "./agent-model";
 import { ArchiveRetention } from "./archive-retention";
 import { ChangePassword } from "./change-password";
+import { Notifications } from "./notifications";
 import { ResearchKey } from "./research-key";
 import { WorkspaceForm } from "./workspace-form";
 
@@ -55,6 +56,7 @@ async function Settings() {
 		queryClient.prefetchQuery(trpc.settings.modelCatalog.queryOptions()),
 		queryClient.prefetchQuery(trpc.settings.researchKey.queryOptions()),
 		queryClient.prefetchQuery(trpc.settings.archiveRetention.queryOptions()),
+		queryClient.prefetchQuery(trpc.push.config.queryOptions()),
 	]);
 
 	return (
@@ -62,6 +64,7 @@ async function Settings() {
 			<div className="flex max-w-3xl flex-col gap-6">
 				<WorkspaceForm />
 				<ChangePassword />
+				<Notifications />
 				<ResearchKey />
 				<ArchiveRetention />
 				<AgentModel />
