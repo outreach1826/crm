@@ -311,3 +311,9 @@ Read it before touching any amount, total, chart or rate.
 - **Background writes need polling, not invalidation** — `refetchInterval` while
   `PENDING`/`RUNNING`, via `isEnriching()` and `ENRICHMENT_POLL_MS`. **Lists poll too,
   not just the sheet.**
+- **Writes from outside the browser show without a reload.** `freshness.stamp` is the
+  count and latest `updatedAt` of deals, companies, contacts and activities.
+  `LiveRefresh` polls it every `FRESHNESS.pollMs` while the tab is visible and
+  invalidates every query when it changes, so an AI's write through `/mcp` or a
+  teammate's edit reaches an open board. A hard delete changes the count; an archive
+  changes `updatedAt`.
