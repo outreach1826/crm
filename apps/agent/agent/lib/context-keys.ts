@@ -10,7 +10,7 @@ export function nextMonthStart(now: number): number {
 
 export function isOutOfCredits(status: number, body: string): boolean {
 	if (status === 402) return true;
-	return status === 429 && /credit|quota|limit exceeded|plan/i.test(body);
+	return status === 429 && /credit/i.test(body) && !/rate/i.test(body);
 }
 
 export function markOutOfCredits(key: string, now = Date.now()): void {

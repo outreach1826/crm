@@ -69,6 +69,10 @@ describe("sharing the team's Context.dev keys", () => {
 		expect(isOutOfCredits(402, "")).toBe(true);
 		expect(isOutOfCredits(429, "Monthly credit quota reached")).toBe(true);
 		expect(isOutOfCredits(429, "Slow down")).toBe(false);
+		expect(
+			isOutOfCredits(429, "Rate limit exceeded. Upgrade your plan for more."),
+		).toBe(false);
+		expect(isOutOfCredits(429, "Rate limit: 2 credits per second")).toBe(false);
 		expect(isOutOfCredits(500, "credit")).toBe(false);
 	});
 
