@@ -83,7 +83,7 @@ No tool deletes data permanently. Only a person in the app can do that.
 | --- | --- |
 | `crm_guide` | Read this guide. |
 | `pipeline_overview` | See every stage, its value, every deal and the follow-up list. Start here. |
-| `dashboard_summary` | Get the headline numbers for the team (`everyone`) or the key owner (`me`). |
+| `dashboard_summary` | Get the headline numbers: won this month, win rate, trend, biggest open deals, overdue tasks. For the team (`everyone`) or the key owner (`me`). |
 | `find_deals` | Search and filter deals by words, status, stage, owner or close date. |
 | `get_deal` | Read one deal in full. |
 | `find_companies` / `get_company` | Search companies / read one in full. |

@@ -143,6 +143,17 @@ describe("the MCP server", () => {
 		expect(sent[1]?.body).toEqual({ data: { amountCents: 5000 } });
 	});
 
+	it("sends a JSON body on an archive, which has no input of its own", async () => {
+		const { handle, sent } = fakeApi(() => Response.json({ id: "co_1" }));
+		const result = await callTool(handle, "archive_record", {
+			kind: "company",
+			id: "co_1",
+		});
+		expect(result.isError).toBe(false);
+		expect(sent[0]?.url.pathname).toBe("/rest/companies/co_1/archive");
+		expect(sent[0]?.body).toEqual({});
+	});
+
 	it("asks for a reason before a deal is closed as lost", async () => {
 		const { handle, sent } = fakeApi();
 		const result = await callTool(handle, "move_deal_stage", {

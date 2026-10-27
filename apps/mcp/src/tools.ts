@@ -239,7 +239,7 @@ export function registerTools(
 		{
 			title: "Get a deal",
 			description:
-				"Returns one deal with its company, owner, contacts, custom fields, amount and stage history.",
+				"Returns one deal with its company, owner, contacts, custom fields and amount.",
 			inputSchema: { id },
 			annotations: READ,
 		},
@@ -452,7 +452,7 @@ export function registerTools(
 		{
 			title: "Dashboard summary",
 			description:
-				"Returns the dashboard numbers: pipeline value, won and lost totals and recent movement. scope 'everyone' covers the whole team. scope 'me' covers the user that owns the API key.",
+				"Returns the dashboard numbers: pipeline by stage, deals won this month and last month, win rate and average deal size over 90 days, a monthly trend, the biggest open deals, overdue tasks and recent activity. Money is in minor units (valueCents). scope 'everyone' covers the whole team. scope 'me' covers the user that owns the API key.",
 			inputSchema: { scope: z.enum(["me", "everyone"]).optional() },
 			annotations: READ,
 		},

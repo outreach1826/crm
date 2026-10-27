@@ -58,15 +58,13 @@ export class CrmClient {
 		}
 
 		const headers = new Headers({ [API_KEY_HEADER]: this.options.apiKey });
-		if (request.body !== undefined) {
-			headers.set("content-type", "application/json");
-		}
+		const sendsBody = request.method !== "GET";
+		if (sendsBody) headers.set("content-type", "application/json");
 
 		const response = await this.options.fetch(url, {
 			method: request.method,
 			headers,
-			body:
-				request.body === undefined ? undefined : JSON.stringify(request.body),
+			body: sendsBody ? JSON.stringify(request.body ?? {}) : undefined,
 			signal: AbortSignal.timeout(MCP.requestTimeoutMs),
 		});
 
