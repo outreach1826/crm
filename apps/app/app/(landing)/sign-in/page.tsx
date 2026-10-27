@@ -1,3 +1,4 @@
+import { isOAuthAuthorizeQuery, OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
 import type { MailboxProviderId } from "@crm/auth/scopes";
 import type { Metadata } from "next";
 import { redirect, unstable_rethrow } from "next/navigation";
@@ -58,17 +59,32 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
 	);
 }
 
+function oauthContinuation(
+	params: Awaited<PageProps<"/sign-in">["searchParams"]>,
+): string | null {
+	const query = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		for (const entry of [value].flat()) {
+			if (entry !== undefined) query.append(key, entry);
+		}
+	}
+	if (!isOAuthAuthorizeQuery(query)) return null;
+	return `/api/auth${OAUTH_PROVIDER.paths.authorize}?${query}`;
+}
+
 async function SignIn({
 	searchParams,
 }: Pick<PageProps<"/sign-in">, "searchParams">) {
-	const [session, options, { method }] = await Promise.all([
+	const [session, options, params] = await Promise.all([
 		currentSession(),
 		signInOptions(),
 		searchParams,
 	]);
+	const { method } = params;
+	const continueTo = oauthContinuation(params);
 
 	if (session) {
-		redirect("/");
+		redirect(continueTo ?? "/");
 	}
 
 	const configured: MailboxProviderId[] = [];
@@ -93,7 +109,7 @@ async function SignIn({
 				description="Sign in with your account to continue."
 			/>
 
-			<PasswordSignIn />
+			<PasswordSignIn continueTo={continueTo} />
 
 			{showSso ? <SsoSignIn providers={providers} /> : null}
 			{social.map((provider) => (

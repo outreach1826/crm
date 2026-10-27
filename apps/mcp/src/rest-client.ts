@@ -1,5 +1,5 @@
-import { API_KEY_HEADER } from "@crm/auth/api-keys";
 import { z } from "zod";
+import { type Credential, credentialHeaders } from "./credentials";
 import { MCP } from "./mcp-config";
 
 export type Json = z.infer<ReturnType<typeof z.json>>;
@@ -27,8 +27,9 @@ const errorBody = z.object({ message: z.string() });
 function describeFailure(status: number, body: Json): string {
 	const parsed = errorBody.safeParse(body);
 	if (parsed.success) return parsed.data.message;
-	if (status === 401) return "The CRM refused the API key.";
-	if (status === 403) return "The API key cannot do this.";
+	if (status === 401)
+		return "The CRM refused the sign-in. Connect the AI app again.";
+	if (status === 403) return "This sign-in cannot do this.";
 	if (status === 404) return "The CRM has no record with that id.";
 	return `The CRM answered with status ${status}.`;
 }
@@ -44,7 +45,7 @@ export class CrmClient {
 	constructor(
 		private readonly options: {
 			apiUrl: string;
-			apiKey: string;
+			credential: Credential;
 			fetch: typeof fetch;
 		},
 	) {}
@@ -57,7 +58,7 @@ export class CrmClient {
 			if (value !== undefined) url.searchParams.set(key, String(value));
 		}
 
-		const headers = new Headers({ [API_KEY_HEADER]: this.options.apiKey });
+		const headers = credentialHeaders(this.options.credential);
 		const sendsBody = request.method !== "GET";
 		if (sendsBody) headers.set("content-type", "application/json");
 

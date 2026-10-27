@@ -23,16 +23,19 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  ownedCompanies Company[]           @relation("CompanyOwner")
-  ownedContacts  Contact[]           @relation("ContactOwner")
-  ownedDeals     Deal[]              @relation("DealOwner")
-  activities     Activity[]          @relation("ActivityAuthor")
-  mailboxSyncs   MailboxSync[]
-  factDecisions  ContactFact[]       @relation("FactDecider")
-  conversations  AgentConversation[] @relation("ConversationOwner")
-  fieldValues    FieldValue[]        @relation("FieldValueUser")
-  savedViews     SavedView[]         @relation("SavedViewOwner")
-  pushDevices    PushSubscription[]  @relation("PushSubscriptionOwner")
+  ownedCompanies    Company[]           @relation("CompanyOwner")
+  ownedContacts     Contact[]           @relation("ContactOwner")
+  ownedDeals        Deal[]              @relation("DealOwner")
+  activities        Activity[]          @relation("ActivityAuthor")
+  mailboxSyncs      MailboxSync[]
+  factDecisions     ContactFact[]       @relation("FactDecider")
+  conversations     AgentConversation[] @relation("ConversationOwner")
+  fieldValues       FieldValue[]        @relation("FieldValueUser")
+  savedViews        SavedView[]         @relation("SavedViewOwner")
+  pushDevices       PushSubscription[]  @relation("PushSubscriptionOwner")
+  oauthApplications OauthApplication[]  @relation("OauthApplicationOwner")
+  oauthAccessTokens OauthAccessToken[]  @relation("OauthAccessTokenOwner")
+  oauthConsents     OauthConsent[]      @relation("OauthConsentOwner")
 
   createdAgentDefinitions AgentDefinition[]             @relation("AgentDefinitionCreator")
   createdAgentVersions    AgentVersion[]                @relation("AgentVersionCreator")
@@ -1737,4 +1740,69 @@ model PushSubscription {
 
   @@index([userId])
   @@map("pushSubscription")
+}
+
+model OauthApplication {
+  id           String   @id
+  name         String?
+  icon         String?
+  metadata     String?
+  clientId     String   @unique
+  clientSecret String?
+  redirectUrls String
+  type         String
+  disabled     Boolean? @default(false)
+
+  userId String?
+  user   User?   @relation("OauthApplicationOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  accessTokens OauthAccessToken[]
+  consents     OauthConsent[]
+
+  createdAt DateTime
+  updatedAt DateTime
+
+  @@index([userId])
+  @@map("oauthApplication")
+}
+
+model OauthAccessToken {
+  id                    String   @id
+  accessToken           String   @unique
+  refreshToken          String   @unique
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  scopes                String
+
+  clientId String
+  client   OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("OauthAccessTokenOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime
+  updatedAt DateTime
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauthAccessToken")
+}
+
+model OauthConsent {
+  id           String  @id
+  scopes       String
+  consentGiven Boolean
+
+  clientId String
+  client   OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("OauthConsentOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime
+  updatedAt DateTime
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauthConsent")
 }

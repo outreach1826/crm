@@ -10,6 +10,7 @@ import { organization } from "better-auth/plugins/organization";
 import { API_KEY_EXPIRATION, API_KEY_HEADER, API_KEY_PREFIX } from "./api-keys";
 import { AUTH_COOKIE_PREFIX } from "./cookies";
 import { env } from "./env";
+import { oauthProviderPlugins } from "./oauth-provider";
 import { ensureWorkspaceMembership } from "./organization";
 import { PASSWORD } from "./passwords";
 import {
@@ -237,6 +238,8 @@ export const auth = betterAuth({
 		sso({
 			organizationProvisioning: { disabled: true },
 		}),
+
+		...oauthProviderPlugins,
 
 		apiKey({
 			apiKeyHeaders: API_KEY_HEADER,

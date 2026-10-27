@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "@crm/auth/client";
+import { getSession, signIn } from "@crm/auth/client";
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
@@ -8,7 +8,7 @@ import { Spinner } from "@crm/ui/components/spinner";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export function PasswordSignIn() {
+export function PasswordSignIn({ continueTo }: { continueTo: string | null }) {
 	const [pending, setPending] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -26,8 +26,16 @@ export function PasswordSignIn() {
 		const { error } = await signIn.email({
 			email,
 			password,
-			callbackURL: `${origin}/`,
+			callbackURL: continueTo ?? `${origin}/`,
 		});
+
+		if (continueTo) {
+			const { data } = await getSession();
+			if (data) {
+				window.location.assign(continueTo);
+				return;
+			}
+		}
 
 		if (error) fail(error.message ?? "That email or password is wrong.");
 	}

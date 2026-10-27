@@ -27,6 +27,7 @@ import { fieldListInput, fieldListOutput, fieldByKeyInput, serializedFieldOutput
 import { googleConnectionStatusOutput, setAutoCreateInput, suppressDomainInput, suppressDomainOutput, threadInput, emailThreadOutput, calendarEventInput, calendarEventOutput } from "../google/google.contracts";
 import { purgeSyncedDataOutput, revokeAccessOutput, microsoftConnectionStatusOutput, setOutlookAutoCreateInput } from "../microsoft/microsoft.contracts";
 import { mcpListOutput, mcpGetInput, mcpGetOutput, mcpToolsInput, mcpToolsOutput, mcpStartInput, mcpStartOutput, mcpReconnectInput, mcpReconnectOutput, mcpDisconnectInput, mcpDisconnectOutput, mcpReviewToolsInput, mcpReviewToolsOutput } from "../mcp/mcp.contracts";
+import { describeOAuthClientInput, describeOAuthClientOutput, connectedOAuthClientsOutput, disconnectOAuthClientInput, disconnectOAuthClientOutput } from "../oauth-clients/oauth-clients.contracts";
 import { pushConfigOutput, pushSubscribeInput, pushSavedOutput, pushEndpointInput, pushRemovedOutput, pushDeliveryOutput } from "../push/push.contracts";
 import { savedViewListInput, savedViewListOutput, savedViewCreateInput, savedViewOutput, savedViewUpdateArgs, savedViewIdInput, savedViewDeleteOutput } from "../saved-views/saved-views.contracts";
 import { agentModelOutput, modelCatalogOutput, setAgentModelInput, researchKeyOutput, setResearchKeyInput, archiveRetentionOutput, setArchiveRetentionDaysInput } from "../settings/settings.contracts";
@@ -617,6 +618,19 @@ const appRouter = t.router({
     setAutoCreate: publicProcedure
       .input(setOutlookAutoCreateInput)
       .output(microsoftConnectionStatusOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
+  oauthClients: t.router({
+    describe: publicProcedure
+      .input(describeOAuthClientInput)
+      .output(describeOAuthClientOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    connected: publicProcedure
+      .output(connectedOAuthClientsOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    disconnect: publicProcedure
+      .input(disconnectOAuthClientInput)
+      .output(disconnectOAuthClientOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
   push: t.router({

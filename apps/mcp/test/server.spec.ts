@@ -1,10 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import { readConfig } from "../src/config";
+import { readCredential } from "../src/credentials";
 import type { Json } from "../src/rest-client";
-import { createHandler, readApiKey } from "../src/server";
+import { createHandler } from "../src/server";
 
-type Sent = { method: string; url: URL; key: string | null; body: Json };
+type Sent = {
+	method: string;
+	url: URL;
+	key: string | null;
+	authorization: string | null;
+	body: Json;
+};
 
 const KEY = "crm_test_key";
 const NOW = Date.now();
@@ -18,13 +25,14 @@ function fakeApi(answer: (sent: Sent) => Response = () => Response.json({})) {
 			method: init?.method ?? "GET",
 			url: new URL(String(input)),
 			key: new Headers(init?.headers).get("x-api-key"),
+			authorization: new Headers(init?.headers).get("authorization"),
 			body,
 		};
 		sent.push(call);
 		return answer(call);
 	};
 	const handle = createHandler({
-		config: readConfig({}),
+		config: readConfig({ API_URL: "https://crm.example" }),
 		guide: "# Guide",
 		fetch: Object.assign(fetcher, { preconnect: fetch.preconnect }),
 	});
@@ -45,13 +53,15 @@ async function rpc(
 	handle: (request: Request) => Promise<Response>,
 	method: string,
 	params: Json = {},
-	key: string | null = KEY,
+	auth: Record<string, string> | null = { "x-api-key": KEY },
 ) {
 	const headers = new Headers({
 		"content-type": "application/json",
 		accept: "application/json, text/event-stream",
 	});
-	if (key) headers.set("x-api-key", key);
+	for (const [name, value] of Object.entries(auth ?? {})) {
+		headers.set(name, value);
+	}
 	const response = await handle(
 		new Request("http://127.0.0.1:3002/mcp", {
 			method: "POST",
@@ -223,25 +233,92 @@ describe("the MCP server", () => {
 	});
 });
 
-describe("readApiKey", () => {
-	it("reads a bearer token", () => {
-		expect(readApiKey(new Headers({ authorization: "Bearer crm_abc" }))).toBe(
-			"crm_abc",
+describe("signing in with OAuth", () => {
+	it("points a client without a key at the sign-in metadata", async () => {
+		const { handle } = fakeApi();
+		const response = await rpc(handle, "tools/list", {}, null);
+		expect(response.headers.get("www-authenticate")).toBe(
+			`Bearer resource_metadata="https://crm.example/.well-known/oauth-protected-resource/mcp"`,
 		);
+	});
+
+	it("describes the protected resource and its authorization server", async () => {
+		const { handle } = fakeApi();
+		const response = await handle(
+			new Request(
+				"http://127.0.0.1:3002/.well-known/oauth-protected-resource/mcp",
+			),
+		);
+		expect(await response.json()).toMatchObject({
+			resource: "https://crm.example/mcp",
+			authorization_servers: ["https://crm.example"],
+		});
+	});
+
+	it("checks an OAuth token, then forwards it to the CRM", async () => {
+		const { handle, sent } = fakeApi((call) =>
+			Response.json(
+				call.url.pathname.endsWith("/mcp/get-session")
+					? { userId: "user_1" }
+					: [],
+			),
+		);
+		const response = await rpc(
+			handle,
+			"tools/call",
+			{ name: "list_team", arguments: {} },
+			{ authorization: "Bearer oauth-token" },
+		);
+		expect(response.status).toBe(200);
+		expect(sent.map((call) => call.url.pathname)).toEqual([
+			"/api/auth/mcp/get-session",
+			"/rest/users",
+		]);
+		expect(sent[1]?.authorization).toBe("Bearer oauth-token");
+		expect(sent[1]?.key).toBeNull();
+	});
+
+	it("answers 401 invalid_token for an expired OAuth token", async () => {
+		const { handle, sent } = fakeApi(() => Response.json(null));
+		const response = await rpc(
+			handle,
+			"tools/list",
+			{},
+			{ authorization: "Bearer expired-token" },
+		);
+		expect(response.status).toBe(401);
+		expect(response.headers.get("www-authenticate")).toContain(
+			`error="invalid_token"`,
+		);
+		expect(sent).toHaveLength(1);
+	});
+});
+
+describe("readCredential", () => {
+	it("reads an API key sent as a bearer token", () => {
+		expect(
+			readCredential(new Headers({ authorization: "Bearer crm_abc" })),
+		).toEqual({ kind: "api-key", value: "crm_abc" });
+	});
+
+	it("reads any other bearer token as OAuth", () => {
+		expect(
+			readCredential(new Headers({ authorization: "Bearer abcdef" })),
+		).toEqual({ kind: "oauth", value: "abcdef" });
 	});
 
 	it("prefers the x-api-key header", () => {
 		expect(
-			readApiKey(
+			readCredential(
 				new Headers({
 					"x-api-key": "crm_one",
 					authorization: "Bearer crm_two",
 				}),
 			),
-		).toBe("crm_one");
+		).toEqual({ kind: "api-key", value: "crm_one" });
 	});
 
-	it("returns null without a key", () => {
-		expect(readApiKey(new Headers())).toBeNull();
+	it("returns null without a credential", () => {
+		expect(readCredential(new Headers())).toBeNull();
 	});
 });

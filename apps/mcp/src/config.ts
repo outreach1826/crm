@@ -9,12 +9,14 @@ const envSchema = z.object({
 		.positive()
 		.default(MCP.defaults.port),
 	MCP_SERVER_API_URL: z.url().default(MCP.defaults.apiUrl),
+	API_URL: z.url().default(MCP.defaults.publicUrl),
 });
 
 export type McpConfig = {
 	host: string;
 	port: number;
 	apiUrl: string;
+	publicUrl: string;
 };
 
 export function readConfig(env: Record<string, string | undefined>): McpConfig {
@@ -23,5 +25,6 @@ export function readConfig(env: Record<string, string | undefined>): McpConfig {
 		host: parsed.MCP_SERVER_HOST,
 		port: parsed.MCP_SERVER_PORT,
 		apiUrl: parsed.MCP_SERVER_API_URL.replace(/\/+$/, ""),
+		publicUrl: parsed.API_URL.replace(/\/+$/, ""),
 	};
 }

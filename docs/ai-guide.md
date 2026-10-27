@@ -127,9 +127,9 @@ return `nextCursor`; pass it as `cursor` for older entries.
 ## Connecting
 
 - **MCP endpoint:** `https://crm.davidkalaty.workers.dev/mcp` (Streamable HTTP).
-- **Authentication:** a CRM API key in the `x-api-key` header, or
-  `Authorization: Bearer <key>`.
+- **Authentication:** OAuth sign-in (apps such as claude.ai find it on their own), or
+  a CRM API key in the `x-api-key` header or as `Authorization: Bearer <key>`.
 - **This guide as a file:** `https://crm.davidkalaty.workers.dev/mcp/guide`.
 - **Raw REST API:** every function is also at `https://crm.davidkalaty.workers.dev/rest/...`
-  with the same key. The full list is at
+  with the same key or OAuth token. The full list is at
   `https://crm.davidkalaty.workers.dev/openapi.json`.

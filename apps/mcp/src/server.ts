@@ -2,30 +2,52 @@ import { API_KEY_HEADER } from "@crm/auth/api-keys";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { McpConfig } from "./config";
+import { isLiveOAuthToken, readCredential } from "./credentials";
 import { MCP } from "./mcp-config";
 import { CrmClient } from "./rest-client";
 import { registerTools } from "./tools";
 
-const BEARER = /^Bearer\s+(.+)$/i;
-
-export function readApiKey(headers: Headers): string | null {
-	const direct = headers.get(API_KEY_HEADER)?.trim();
-	if (direct) return direct;
-	const bearer = BEARER.exec(headers.get("authorization") ?? "")?.[1]?.trim();
-	return bearer || null;
+function resourceMetadataUrl(config: McpConfig): string {
+	return `${config.publicUrl}${MCP.paths.protectedResource}${MCP.paths.mcp}`;
 }
 
-function unauthorized(): Response {
+function protectedResource(config: McpConfig): Response {
+	return Response.json(
+		{
+			resource: `${config.publicUrl}${MCP.paths.mcp}`,
+			authorization_servers: [config.publicUrl],
+			scopes_supported: MCP.scopes,
+			bearer_methods_supported: ["header"],
+			resource_name: MCP.resourceName,
+		},
+		{ headers: { "access-control-allow-origin": "*" } },
+	);
+}
+
+function unauthorized(config: McpConfig, invalidToken: boolean): Response {
+	const challenge = [
+		"Bearer",
+		`resource_metadata="${resourceMetadataUrl(config)}"`,
+		...(invalidToken ? ['error="invalid_token"'] : []),
+	].join(" ");
 	return Response.json(
 		{
 			jsonrpc: "2.0",
 			error: {
 				code: -32001,
-				message: `Send a CRM API key in the ${API_KEY_HEADER} header or as Authorization: Bearer <key>.`,
+				message: invalidToken
+					? "The sign-in expired or was revoked. Connect the AI app again."
+					: `Sign in with OAuth, or send a CRM API key in the ${API_KEY_HEADER} header.`,
 			},
 			id: null,
 		},
-		{ status: 401, headers: { "www-authenticate": "Bearer" } },
+		{
+			status: 401,
+			headers: {
+				"www-authenticate": challenge,
+				"access-control-expose-headers": "WWW-Authenticate",
+			},
+		},
 	);
 }
 
@@ -57,6 +79,8 @@ export function createHandler(options: {
 	guide: string;
 	fetch: typeof fetch;
 }): (request: Request) => Promise<Response> {
+	const { config } = options;
+
 	return async (request) => {
 		const { pathname } = new URL(request.url);
 
@@ -68,16 +92,29 @@ export function createHandler(options: {
 			});
 		}
 
+		if (pathname.startsWith(MCP.paths.protectedResource)) {
+			return protectedResource(config);
+		}
+
 		if (pathname !== MCP.paths.mcp) {
 			return new Response("Not found", { status: 404 });
 		}
 
-		const apiKey = readApiKey(request.headers);
-		if (!apiKey) return unauthorized();
+		const credential = readCredential(request.headers);
+		if (!credential) return unauthorized(config, false);
+
+		if (credential.kind === "oauth") {
+			const live = await isLiveOAuthToken({
+				apiUrl: config.apiUrl,
+				token: credential.value,
+				fetch: options.fetch,
+			}).catch(() => false);
+			if (!live) return unauthorized(config, true);
+		}
 
 		const crm = new CrmClient({
-			apiUrl: options.config.apiUrl,
-			apiKey,
+			apiUrl: config.apiUrl,
+			credential,
 			fetch: options.fetch,
 		});
 		const server = createServer(crm, options.guide);
