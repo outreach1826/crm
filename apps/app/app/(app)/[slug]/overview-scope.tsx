@@ -6,7 +6,7 @@ import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import {
 	OVERVIEW_SCOPES,
 	type OverviewScope,
-	overviewParsers,
+	overviewScopeParser,
 } from "./overview-search-params";
 
 const LABELS = {
@@ -37,10 +37,14 @@ export function OverviewScopeToggleFallback() {
 	);
 }
 
-export function OverviewScopeToggle() {
+export function OverviewScopeToggle({
+	defaultScope,
+}: {
+	defaultScope: OverviewScope;
+}) {
 	const [scope, setScope] = useQueryState(
 		SEARCH_PARAM.overview.scope,
-		overviewParsers[SEARCH_PARAM.overview.scope],
+		overviewScopeParser(defaultScope),
 	);
 
 	return (

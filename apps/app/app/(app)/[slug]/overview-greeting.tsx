@@ -3,7 +3,10 @@
 import { useQueryState } from "nuqs";
 import { PageShellDescription, PageShellTitle } from "@/components/page-shell";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
-import { overviewParsers } from "./overview-search-params";
+import {
+	type OverviewScope,
+	overviewScopeParser,
+} from "./overview-search-params";
 
 export function OverviewGreetingFallback() {
 	return (
@@ -16,10 +19,14 @@ export function OverviewGreetingFallback() {
 	);
 }
 
-export function OverviewGreeting() {
+export function OverviewGreeting({
+	defaultScope,
+}: {
+	defaultScope: OverviewScope;
+}) {
 	const [scope] = useQueryState(
 		SEARCH_PARAM.overview.scope,
-		overviewParsers[SEARCH_PARAM.overview.scope],
+		overviewScopeParser(defaultScope),
 	);
 
 	return (

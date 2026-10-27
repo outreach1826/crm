@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+import { isWorkspaceAdmin, workspaceRoleOf } from "@crm/auth/organization";
+import { cache, Suspense } from "react";
 import {
 	PageShell,
 	PageShellActions,
@@ -15,11 +16,19 @@ import {
 	OverviewGreeting,
 	OverviewGreetingFallback,
 } from "./overview-greeting";
+import { OverviewScopeToggle } from "./overview-scope";
 import {
-	OverviewScopeToggle,
-	OverviewScopeToggleFallback,
-} from "./overview-scope";
-import { loadOverviewSearchParams } from "./overview-search-params";
+	loadOverviewSearchParams,
+	type OverviewScope,
+} from "./overview-search-params";
+
+const overviewAccess = cache(
+	async (): Promise<{ admin: boolean; defaultScope: OverviewScope }> => {
+		const { user } = await requireSession();
+		const admin = isWorkspaceAdmin(await workspaceRoleOf(user.id));
+		return { admin, defaultScope: admin ? "everyone" : "me" };
+	},
+);
 
 export default function OverviewPage({ searchParams }: PageProps<"/[slug]">) {
 	return (
@@ -27,12 +36,12 @@ export default function OverviewPage({ searchParams }: PageProps<"/[slug]">) {
 			<PageShellHeader>
 				<PageShellHeading>
 					<Suspense fallback={<OverviewGreetingFallback />}>
-						<OverviewGreeting />
+						<GreetingForRole />
 					</Suspense>
 				</PageShellHeading>
 				<PageShellActions>
-					<Suspense fallback={<OverviewScopeToggleFallback />}>
-						<OverviewScopeToggle />
+					<Suspense fallback={null}>
+						<AdminScopeToggle />
 					</Suspense>
 				</PageShellActions>
 			</PageShellHeader>
@@ -46,13 +55,25 @@ export default function OverviewPage({ searchParams }: PageProps<"/[slug]">) {
 	);
 }
 
+async function GreetingForRole() {
+	const { defaultScope } = await overviewAccess();
+	return <OverviewGreeting defaultScope={defaultScope} />;
+}
+
+async function AdminScopeToggle() {
+	const { admin, defaultScope } = await overviewAccess();
+	if (!admin) return null;
+	return <OverviewScopeToggle defaultScope={defaultScope} />;
+}
+
 async function Summary({
 	searchParams,
 }: Pick<PageProps<"/[slug]">, "searchParams">) {
-	const [, { scope }] = await Promise.all([
-		requireSession(),
+	const [{ defaultScope }, params] = await Promise.all([
+		overviewAccess(),
 		loadOverviewSearchParams(searchParams),
 	]);
+	const scope = params.scope ?? defaultScope;
 
 	const queryClient = getServerQueryClient();
 	await queryClient.prefetchQuery(
@@ -61,7 +82,7 @@ async function Summary({
 
 	return (
 		<HydrateClient>
-			<DashboardSummary />
+			<DashboardSummary defaultScope={defaultScope} />
 		</HydrateClient>
 	);
 }

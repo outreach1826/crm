@@ -31,7 +31,20 @@ agent and the API both need it.
 - **The key hashes the bytes** — idempotent, and a redesigned mark gets a new URL.
 - **`COMPANY_IMAGE_FIELDS` (`@crm/db/images`) is the one list of picture columns.**
 - **Fetch through `@crm/db/safe-fetch`** — vendor URLs are SSRF vectors.
-- **No `BLOB_READ_WRITE_TOKEN` means no photographs**; logos keep the origin URL.
+- **No `BLOB_READ_WRITE_TOKEN` means no photographs**; logos keep the origin URL —
+  unless `MEDIA_DIR` and `MEDIA_URL` are set, which store the same bytes on the
+  server's own disk. `isMirrored` from `@crm/db/blob` knows both; the one in
+  `@crm/db/images` knows only Vercel Blob, because only those URLs may go through the
+  Next image optimizer.
+- **A contact's photo is looked for once.** `contactsNeedingPhoto` skips every contact
+  with a finished `portrait` task, whatever it found, so a paid LinkedIn lookup is
+  never repeated. Hugging Face (an uploaded picture, not the generated placeholder)
+  and GitHub are free sources.
+- **Context keys are per person** (`researchKey`, one per user) plus the workspace key.
+  `lib/context-keys.ts` tries them in turn and skips a key Context answers 402 for
+  (or 429 about credits) until the next month. The skip list is in memory.
+- **`AGENT_TASK_KINDS` limits the agent to some kinds**, for example `portrait`
+  only. `lib/task-kinds.ts` applies it to both lanes.
 - **`isOptimizable` (`@crm/db/images`) is the whole rule**: `next.config.ts`
   allow-lists only our Blob host (a wildcard makes us an open image proxy), and a
   mirrored **SVG is still refused**.

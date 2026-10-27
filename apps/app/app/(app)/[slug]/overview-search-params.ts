@@ -5,9 +5,12 @@ export const OVERVIEW_SCOPES = ["me", "everyone"] as const;
 
 export type OverviewScope = (typeof OVERVIEW_SCOPES)[number];
 
-export const overviewParsers = {
-	[SEARCH_PARAM.overview.scope]:
-		parseAsStringLiteral(OVERVIEW_SCOPES).withDefault("me"),
-};
+const scope = parseAsStringLiteral(OVERVIEW_SCOPES);
 
-export const loadOverviewSearchParams = createLoader(overviewParsers);
+export function overviewScopeParser(defaultScope: OverviewScope) {
+	return scope.withDefault(defaultScope);
+}
+
+export const loadOverviewSearchParams = createLoader({
+	[SEARCH_PARAM.overview.scope]: scope,
+});

@@ -1,3 +1,4 @@
+import { isWorkspaceAdmin, workspaceRoleOf } from "@crm/auth/organization";
 import { Inject } from "@nestjs/common";
 import { Ctx, Input, Query, Router, UseMiddlewares } from "nestjs-trpc";
 import type { z } from "zod";
@@ -26,6 +27,10 @@ export class DashboardRouter {
 		@Ctx() ctx: AuthedTrpcContext,
 		@Input() input: z.infer<typeof dashboardSummaryInput>,
 	) {
-		return this.dashboard.summary(ctx.user.id, input);
+		const admin = isWorkspaceAdmin(await workspaceRoleOf(ctx.user.id));
+		return this.dashboard.summary(ctx.user.id, {
+			...input,
+			scope: admin ? input.scope : "me",
+		});
 	}
 }

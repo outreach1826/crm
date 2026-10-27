@@ -41,7 +41,10 @@ import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
-import { overviewParsers } from "./overview-search-params";
+import {
+	type OverviewScope,
+	overviewScopeParser,
+} from "./overview-search-params";
 import { SalesDashboard } from "./sales-dashboard";
 
 const CELL = "px-3 py-2.5 align-middle";
@@ -89,7 +92,11 @@ const ACTIVITY_COLUMNS: SimpleTableColumn[] = [
 	{ id: "when", header: "When", width: "w-20", align: "right" },
 ];
 
-export function DashboardSummary() {
+export function DashboardSummary({
+	defaultScope,
+}: {
+	defaultScope: OverviewScope;
+}) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
 	const openRecord = useOpenRecord();
@@ -97,7 +104,7 @@ export function DashboardSummary() {
 
 	const [scope] = useQueryState(
 		SEARCH_PARAM.overview.scope,
-		overviewParsers[SEARCH_PARAM.overview.scope],
+		overviewScopeParser(defaultScope),
 	);
 
 	const summaryQuery = useQuery({
@@ -124,7 +131,7 @@ export function DashboardSummary() {
 
 	const { biggestOpen, overdueTasks, recentActivity } = summary;
 
-	const mine = scope === "me";
+	const mine = summary.scope === "me";
 	const largestOpenCents = biggestOpen[0]?.baseAmountCents ?? 0;
 
 	return (
