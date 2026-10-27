@@ -10,6 +10,9 @@ const EMAIL = `ada@${DOMAIN}`;
 const REDIRECT = "https://client.example/callback";
 
 const previousAllowList = process.env.ALLOWED_SIGN_IN;
+const previousBridgeSecret = process.env.MCP_SERVER_SECRET;
+const BRIDGE_SECRET = "bridge-secret-for-tests-0123456789";
+process.env.MCP_SERVER_SECRET = BRIDGE_SECRET;
 process.env.ALLOWED_SIGN_IN = [previousAllowList, DOMAIN]
 	.filter(Boolean)
 	.join(",");
@@ -142,6 +145,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await db.oauthApplication.deleteMany({ where: { clientId } });
 		await db.user.deleteMany({ where: { email: EMAIL } });
 		process.env.ALLOWED_SIGN_IN = previousAllowList;
+		process.env.MCP_SERVER_SECRET = previousBridgeSecret;
 		await app.close();
 	});
 
@@ -191,6 +195,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await request(server)
 			.get("/rest/users")
 			.set("authorization", `Bearer ${access_token}`)
+			.set("x-crm-mcp-secret", BRIDGE_SECRET)
 			.expect(200);
 	});
 
@@ -199,6 +204,20 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await request(server)
 			.get("/rest/api-keys")
 			.set("authorization", `Bearer ${access_token}`)
+			.set("x-crm-mcp-secret", BRIDGE_SECRET)
+			.expect(401);
+	});
+
+	it("refuses an access token that does not come through the MCP server", async () => {
+		const { access_token } = await grant();
+		await request(server)
+			.get("/rest/users")
+			.set("authorization", `Bearer ${access_token}`)
+			.expect(401);
+		await request(server)
+			.get("/rest/users")
+			.set("authorization", `Bearer ${access_token}`)
+			.set("x-crm-mcp-secret", "a-wrong-secret-of-the-same-length!")
 			.expect(401);
 	});
 
@@ -206,6 +225,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await request(server)
 			.get("/rest/users")
 			.set("authorization", "Bearer not-a-real-token")
+			.set("x-crm-mcp-secret", BRIDGE_SECRET)
 			.expect(401);
 	});
 
@@ -225,6 +245,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await request(server)
 			.get("/rest/users")
 			.set("authorization", `Bearer ${access_token}`)
+			.set("x-crm-mcp-secret", BRIDGE_SECRET)
 			.expect(200);
 	});
 
@@ -245,6 +266,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		await request(server)
 			.get("/rest/users")
 			.set("authorization", `Bearer ${access_token}`)
+			.set("x-crm-mcp-secret", BRIDGE_SECRET)
 			.expect(401);
 	});
 });

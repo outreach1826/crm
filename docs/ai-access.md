@@ -20,9 +20,13 @@ change the CRM with a normal CRM API key or an OAuth sign-in.
   The MCP server serves that document. It names the site origin as the authorization
   server, and the reverse proxy sends `/.well-known/oauth-authorization-server` to
   `/api/auth/.well-known/oauth-authorization-server`.
-- **The API accepts the access token.** `createBaseTrpcContext` turns
-  `Authorization: Bearer` into a session through `getMcpSession`. Session-only
-  procedures (API keys, connected apps) refuse a bearer token, like an API key.
+- **The API accepts the access token only from the MCP server.** `createBaseTrpcContext`
+  turns `Authorization: Bearer` into a session through `getMcpSession`, but only when
+  the request also carries `x-crm-mcp-secret` equal to `MCP_SERVER_SECRET`. A token
+  sent straight to `/rest` is refused, so an allowed app reaches only the curated
+  tools and never a purge. Without the secret, OAuth is off and API keys still work.
+  Session-only procedures (API keys, connected apps) refuse a bearer token, like an
+  API key.
 - **The MCP server checks an OAuth token before every request.** It answers 401
   `invalid_token` when the token is expired or revoked, so the client refreshes or
   signs in again. Access tokens last an hour, refresh tokens 30 days.

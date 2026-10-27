@@ -16,6 +16,7 @@ export const OAUTH_PROVIDER = {
 	codeSeconds: 10 * MINUTE_SECONDS,
 	accessTokenSeconds: HOUR_SECONDS,
 	refreshTokenSeconds: 30 * DAY_SECONDS,
+	bridge: { header: "x-crm-mcp-secret", minSecretLength: 32 },
 	authorizeParams: ["client_id", "response_type", "redirect_uri"],
 	consentParams: ["consent_code", "client_id"],
 } as const;

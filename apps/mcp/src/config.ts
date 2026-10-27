@@ -1,3 +1,4 @@
+import { OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
 import { z } from "zod";
 import { MCP } from "./mcp-config";
 
@@ -9,6 +10,10 @@ const envSchema = z.object({
 		.positive()
 		.default(MCP.defaults.port),
 	MCP_SERVER_API_URL: z.url().default(MCP.defaults.apiUrl),
+	MCP_SERVER_SECRET: z
+		.string()
+		.min(OAUTH_PROVIDER.bridge.minSecretLength)
+		.optional(),
 	API_URL: z.url().default(MCP.defaults.publicUrl),
 });
 
@@ -17,6 +22,7 @@ export type McpConfig = {
 	port: number;
 	apiUrl: string;
 	publicUrl: string;
+	bridgeSecret: string | null;
 };
 
 export function readConfig(env: Record<string, string | undefined>): McpConfig {
@@ -26,5 +32,6 @@ export function readConfig(env: Record<string, string | undefined>): McpConfig {
 		port: parsed.MCP_SERVER_PORT,
 		apiUrl: parsed.MCP_SERVER_API_URL.replace(/\/+$/, ""),
 		publicUrl: parsed.API_URL.replace(/\/+$/, ""),
+		bridgeSecret: parsed.MCP_SERVER_SECRET ?? null,
 	};
 }

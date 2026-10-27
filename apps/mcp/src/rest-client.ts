@@ -46,6 +46,7 @@ export class CrmClient {
 		private readonly options: {
 			apiUrl: string;
 			credential: Credential;
+			bridgeSecret: string | null;
 			fetch: typeof fetch;
 		},
 	) {}
@@ -58,7 +59,10 @@ export class CrmClient {
 			if (value !== undefined) url.searchParams.set(key, String(value));
 		}
 
-		const headers = credentialHeaders(this.options.credential);
+		const headers = credentialHeaders(
+			this.options.credential,
+			this.options.bridgeSecret,
+		);
 		const sendsBody = request.method !== "GET";
 		if (sendsBody) headers.set("content-type", "application/json");
 

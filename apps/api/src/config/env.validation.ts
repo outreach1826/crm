@@ -144,6 +144,13 @@ export class EnvironmentVariables {
 
 	@IsOptional()
 	@IsString()
+	@MinLength(32, {
+		message: "MCP_SERVER_SECRET must be at least 32 characters long.",
+	})
+	MCP_SERVER_SECRET?: string;
+
+	@IsOptional()
+	@IsString()
 	@Matches(/^[A-Za-z0-9+/]{43}=$/, {
 		message: "MCP_ENCRYPTION_KEY must contain exactly 32 base64-encoded bytes.",
 	})

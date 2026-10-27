@@ -19,10 +19,16 @@ export function readCredential(headers: Headers): Credential | null {
 		: { kind: "oauth", value: bearer };
 }
 
-export function credentialHeaders(credential: Credential): Headers {
-	return credential.kind === "api-key"
-		? new Headers({ [API_KEY_HEADER]: credential.value })
-		: new Headers({ authorization: `Bearer ${credential.value}` });
+export function credentialHeaders(
+	credential: Credential,
+	bridgeSecret: string | null,
+): Headers {
+	if (credential.kind === "api-key") {
+		return new Headers({ [API_KEY_HEADER]: credential.value });
+	}
+	const headers = new Headers({ authorization: `Bearer ${credential.value}` });
+	if (bridgeSecret) headers.set(OAUTH_PROVIDER.bridge.header, bridgeSecret);
+	return headers;
 }
 
 const tokenSession = z.object({ userId: z.string().min(1) }).nullable();

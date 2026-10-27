@@ -10,14 +10,19 @@ type Sent = {
 	url: URL;
 	key: string | null;
 	authorization: string | null;
+	bridge: string | null;
 	body: Json;
 };
 
 const KEY = "crm_test_key";
+const BRIDGE_SECRET = "bridge-secret-for-tests-0123456789";
 const NOW = Date.now();
 const DAY = 86_400_000;
 
-function fakeApi(answer: (sent: Sent) => Response = () => Response.json({})) {
+function fakeApi(
+	answer: (sent: Sent) => Response = () => Response.json({}),
+	env: Record<string, string> = { MCP_SERVER_SECRET: BRIDGE_SECRET },
+) {
 	const sent: Sent[] = [];
 	const fetcher = async (input: string | URL | Request, init?: RequestInit) => {
 		const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -26,13 +31,14 @@ function fakeApi(answer: (sent: Sent) => Response = () => Response.json({})) {
 			url: new URL(String(input)),
 			key: new Headers(init?.headers).get("x-api-key"),
 			authorization: new Headers(init?.headers).get("authorization"),
+			bridge: new Headers(init?.headers).get("x-crm-mcp-secret"),
 			body,
 		};
 		sent.push(call);
 		return answer(call);
 	};
 	const handle = createHandler({
-		config: readConfig({ API_URL: "https://crm.example" }),
+		config: readConfig({ API_URL: "https://crm.example", ...env }),
 		guide: "# Guide",
 		fetch: Object.assign(fetcher, { preconnect: fetch.preconnect }),
 	});
@@ -275,7 +281,27 @@ describe("signing in with OAuth", () => {
 			"/rest/users",
 		]);
 		expect(sent[1]?.authorization).toBe("Bearer oauth-token");
+		expect(sent[1]?.bridge).toBe(BRIDGE_SECRET);
 		expect(sent[1]?.key).toBeNull();
+	});
+
+	it("refuses OAuth when the server has no bridge secret", async () => {
+		const { handle, sent } = fakeApi(() => Response.json({ userId: "u" }), {});
+		const response = await rpc(
+			handle,
+			"tools/list",
+			{},
+			{ authorization: "Bearer oauth-token" },
+		);
+		expect(response.status).toBe(401);
+		expect(sent).toHaveLength(0);
+	});
+
+	it("never sends the bridge secret with an API key", async () => {
+		const { handle, sent } = fakeApi(() => Response.json([]));
+		await callTool(handle, "list_team", {});
+		expect(sent[0]?.key).toBe(KEY);
+		expect(sent[0]?.bridge).toBeNull();
 	});
 
 	it("answers 401 invalid_token for an expired OAuth token", async () => {

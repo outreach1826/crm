@@ -1,4 +1,6 @@
+import { timingSafeEqual } from "node:crypto";
 import { auth, type Session } from "@crm/auth/auth";
+import { OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
 import { db } from "@crm/db";
 import { Injectable } from "@nestjs/common";
 import { fromNodeHeaders } from "better-auth/node";
@@ -12,7 +14,31 @@ export function hasBearerToken(req: Request | undefined): boolean {
 	return BEARER.test(req?.headers.authorization ?? "");
 }
 
+export function isFromMcpServer(
+	sent: string | null,
+	secret: string | undefined,
+): boolean {
+	if (!secret || secret.length < OAUTH_PROVIDER.bridge.minSecretLength) {
+		return false;
+	}
+	if (!sent) return false;
+	const expected = Buffer.from(secret);
+	const received = Buffer.from(sent);
+	return (
+		expected.length === received.length && timingSafeEqual(expected, received)
+	);
+}
+
 async function oauthSession(headers: Headers): Promise<Session | null> {
+	if (
+		!isFromMcpServer(
+			headers.get(OAUTH_PROVIDER.bridge.header),
+			process.env.MCP_SERVER_SECRET,
+		)
+	) {
+		return null;
+	}
+
 	const token = await auth.api.getMcpSession({ headers });
 	if (!token?.userId) return null;
 

@@ -104,6 +104,7 @@ export function createHandler(options: {
 		if (!credential) return unauthorized(config, false);
 
 		if (credential.kind === "oauth") {
+			if (!config.bridgeSecret) return unauthorized(config, true);
 			const live = await isLiveOAuthToken({
 				apiUrl: config.apiUrl,
 				token: credential.value,
@@ -115,6 +116,7 @@ export function createHandler(options: {
 		const crm = new CrmClient({
 			apiUrl: config.apiUrl,
 			credential,
+			bridgeSecret: config.bridgeSecret,
 			fetch: options.fetch,
 		});
 		const server = createServer(crm, options.guide);
