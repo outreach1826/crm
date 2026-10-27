@@ -8,7 +8,7 @@ import {
 	type DataTableFacet,
 } from "@crm/ui/components/data-table";
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
-import { PersonAvatar } from "@crm/ui/components/person-avatar";
+import { ZoomablePersonAvatar } from "@crm/ui/components/person-avatar";
 import { useSearchInput } from "@crm/ui/hooks/use-search-input";
 import { useTableSelection } from "@crm/ui/hooks/use-table-selection";
 import { useQuery } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ const COLUMNS: DataTableColumn<ContactRow>[] = [
 		width: "w-[22%]",
 		cell: (row) => (
 			<span className="flex min-w-0 items-center gap-2">
-				<PersonAvatar
+				<ZoomablePersonAvatar
 					src={row.imageUrl}
 					name={contactName(row)}
 					email={row.email}

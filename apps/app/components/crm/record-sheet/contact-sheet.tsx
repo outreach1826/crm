@@ -17,7 +17,7 @@ import {
 	type EntityLogoTone,
 } from "@crm/ui/components/entity-logo";
 import { Icon } from "@crm/ui/components/icon";
-import { PersonAvatar } from "@crm/ui/components/person-avatar";
+import { ZoomablePersonAvatar } from "@crm/ui/components/person-avatar";
 import { SimpleTable, SimpleTableRow } from "@crm/ui/components/simple-table";
 import { StatusIndicator } from "@crm/ui/components/status-indicator";
 import { TableCell } from "@crm/ui/components/table";
@@ -169,7 +169,7 @@ export function ContactSheet({ contactId }: { contactId: string }) {
 				) : null
 			}
 			media={
-				<PersonAvatar
+				<ZoomablePersonAvatar
 					src={contact?.imageUrl}
 					name={contact ? contactName(contact) : "?"}
 					email={contact?.email}
