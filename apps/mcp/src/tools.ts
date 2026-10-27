@@ -558,6 +558,12 @@ export function registerTools(
 				phone: z.string().optional(),
 				title: z.string().optional(),
 				linkedinUrl: z.string().optional(),
+				huggingfaceUrl: z
+					.string()
+					.optional()
+					.describe(
+						"Hugging Face profile, for example https://huggingface.co/name.",
+					),
 				companyId: id.nullable().optional(),
 				ownerId: id.nullable().optional(),
 			},

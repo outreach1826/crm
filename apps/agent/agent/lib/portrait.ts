@@ -114,6 +114,7 @@ export async function runPortrait({
 			imageUrl: true,
 			linkedinUrl: true,
 			githubUrl: true,
+			huggingfaceUrl: true,
 			company: { select: { name: true, domain: true } },
 		},
 	});
@@ -137,6 +138,7 @@ export async function runPortrait({
 				[contact.firstName, contact.lastName].filter(Boolean).join(" ") || null,
 			linkedinUrl: contact.linkedinUrl,
 			githubUrl: contact.githubUrl,
+			huggingfaceUrl: contact.huggingfaceUrl,
 			companyName: contact.company?.name ?? null,
 			companyDomain: contact.company?.domain ?? null,
 		},
@@ -152,7 +154,7 @@ export async function runPortrait({
 				found.reason ??
 				(found.tried.length > 0
 					? `No picture found. Tried: ${found.tried.join("; ")}.`
-					: "Nothing on this contact points at a picture — no LinkedIn or GitHub profile, and no company website."),
+					: "Nothing on this contact points at a picture — no LinkedIn, Hugging Face or GitHub profile, and no company website."),
 		};
 	}
 

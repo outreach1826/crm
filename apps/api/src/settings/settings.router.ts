@@ -1,12 +1,21 @@
 import { Inject } from "@nestjs/common";
-import { Input, Mutation, Query, Router, UseMiddlewares } from "nestjs-trpc";
+import {
+	Ctx,
+	Input,
+	Mutation,
+	Query,
+	Router,
+	UseMiddlewares,
+} from "nestjs-trpc";
 import type { z } from "zod";
+import type { AuthedTrpcContext } from "../trpc/context.types";
 import { AuthMiddleware } from "../trpc/middlewares/auth.middleware";
 import { restMeta } from "../trpc/openapi";
 import {
 	agentModelOutput,
 	archiveRetentionOutput,
 	modelCatalogOutput,
+	myResearchKeyOutput,
 	researchKeyOutput,
 	setAgentModelInput,
 	setArchiveRetentionDaysInput,
@@ -61,6 +70,34 @@ export class SettingsRouter {
 	})
 	async setResearchKey(@Input() input: z.infer<typeof setResearchKeyInput>) {
 		return this.settings.setResearchKey(input.apiKey);
+	}
+
+	@Query({
+		output: myResearchKeyOutput,
+		meta: restMeta("GET", "/settings/my-research-key", ["Settings"]),
+	})
+	async myResearchKey(@Ctx() ctx: AuthedTrpcContext) {
+		return this.settings.myResearchKey(ctx.user.id);
+	}
+
+	@Mutation({
+		input: setResearchKeyInput,
+		output: myResearchKeyOutput,
+		meta: restMeta("PATCH", "/settings/my-research-key", ["Settings"]),
+	})
+	async setMyResearchKey(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof setResearchKeyInput>,
+	) {
+		return this.settings.setMyResearchKey(ctx.user.id, input.apiKey);
+	}
+
+	@Mutation({
+		output: myResearchKeyOutput,
+		meta: restMeta("DELETE", "/settings/my-research-key", ["Settings"]),
+	})
+	async clearMyResearchKey(@Ctx() ctx: AuthedTrpcContext) {
+		return this.settings.clearMyResearchKey(ctx.user.id);
 	}
 
 	@Query({

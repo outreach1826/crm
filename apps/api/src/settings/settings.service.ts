@@ -1,13 +1,17 @@
 import type { Db } from "@crm/db";
 import {
 	DEFAULT_AGENT_MODEL,
+	deleteUserContextDevKey,
 	maskKey,
 	readAgentModel,
 	readArchiveRetentionDays,
 	readContextDevKey,
+	readContextDevKeys,
+	readUserContextDevKey,
 	writeAgentModel,
 	writeArchiveRetentionDays,
 	writeContextDevKey,
+	writeUserContextDevKey,
 } from "@crm/db/settings";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ResearchKeyService } from "../agent/research-key.service";
@@ -18,6 +22,7 @@ import type {
 	AgentModelSettings,
 	ArchiveRetentionSettings,
 	ModelCatalogResult,
+	MyResearchKeySettings,
 	ResearchKeySettings,
 } from "./settings.contracts";
 
@@ -89,6 +94,44 @@ export class SettingsService {
 		const key = await readContextDevKey(this.db);
 
 		return { configured: key !== null, hint: key ? maskKey(key) : null };
+	}
+
+	async myResearchKey(userId: string): Promise<MyResearchKeySettings> {
+		const [key, team] = await Promise.all([
+			readUserContextDevKey(this.db, userId),
+			readContextDevKeys(this.db),
+		]);
+
+		return {
+			configured: key !== null,
+			hint: key ? maskKey(key) : null,
+			teamKeys: team.length,
+		};
+	}
+
+	async setMyResearchKey(
+		userId: string,
+		apiKey: string,
+	): Promise<MyResearchKeySettings> {
+		const check = await this.researchKeys.verify(apiKey);
+
+		if (check.outcome === "invalid") {
+			throw new BadRequestException(check.reason);
+		}
+
+		await writeUserContextDevKey(this.db, userId, apiKey);
+
+		this.logger.log({
+			message: "Personal Context key saved",
+			verified: check.outcome === "valid",
+		});
+
+		return this.myResearchKey(userId);
+	}
+
+	async clearMyResearchKey(userId: string): Promise<MyResearchKeySettings> {
+		await deleteUserContextDevKey(this.db, userId);
+		return this.myResearchKey(userId);
 	}
 
 	async setResearchKey(apiKey: string): Promise<ResearchKeySettings> {

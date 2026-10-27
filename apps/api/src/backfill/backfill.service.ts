@@ -38,7 +38,6 @@ const AUTO_EVERY_MS = 5 * 60_000;
  * and no headshot on their employer's site is unlikely to acquire either this
  * week, and the team-page read costs credits every time it is asked.
  */
-const RECHECK_PHOTO_AFTER_MS = 30 * 24 * 60 * 60_000;
 
 const RECHECK_BRAND_AFTER_MS = 30 * 24 * 60 * 60_000;
 
@@ -269,7 +268,7 @@ export class BackfillService implements OnModuleInit {
 			select: { companyId: true },
 		});
 
-		const recentlyChecked = checked
+		const alreadyChecked = checked
 			.map((row) => row.companyId)
 			.filter((id): id is string => id !== null);
 
@@ -278,38 +277,21 @@ export class BackfillService implements OnModuleInit {
 			logoUrl: null,
 			iconUrl: null,
 		};
-		if (recentlyChecked.length > 0) where.id = { notIn: recentlyChecked };
+		if (alreadyChecked.length > 0) where.id = { notIn: alreadyChecked };
 
 		return where;
 	}
 
-	/**
-	 * Contacts with a face to fetch and nowhere it has been put yet.
-	 *
-	 * Three doors qualify, matching the agent's chain: a LinkedIn URL, a GitHub
-	 * URL, or an employer with a website. The third is the expensive one — it
-	 * spends Context.dev credits reading the company's team page — and it is in
-	 * here because it works, which is the only reason worth having.
-	 *
-	 * Which makes the exclusion below load-bearing rather than an optimisation.
-	 * Most people are not on their employer's team page and never will be, so
-	 * without it every sweep would pay to re-read the same forty sites and find
-	 * the same nothing, for as long as the install runs. A finished `portrait`
-	 * task is the record that we looked; a month is long enough that a rebuilt
-	 * team page or a new LinkedIn account is still picked up eventually.
-	 */
 	private async contactsNeedingPhoto(): Promise<Prisma.ContactWhereInput> {
-		const since = new Date(Date.now() - RECHECK_PHOTO_AFTER_MS);
-
 		// `AgentTask.contactId` is a bare column with no Prisma relation, so this
 		// cannot be a nested `some`. Two queries, and the id list is bounded by
 		// the number of contacts we have already looked for.
 		const checked = await this.db.agentTask.findMany({
-			where: { kind: "portrait", finishedAt: { gte: since } },
+			where: { kind: "portrait", finishedAt: { not: null } },
 			select: { contactId: true },
 		});
 
-		const recentlyChecked = checked
+		const alreadyChecked = checked
 			.map((row) => row.contactId)
 			.filter((id): id is string => id !== null);
 
@@ -318,10 +300,11 @@ export class BackfillService implements OnModuleInit {
 			OR: [
 				{ linkedinUrl: { not: null } },
 				{ githubUrl: { not: null } },
+				{ huggingfaceUrl: { not: null } },
 				{ company: { domain: { not: null } } },
 			],
 		};
-		if (recentlyChecked.length > 0) where.id = { notIn: recentlyChecked };
+		if (alreadyChecked.length > 0) where.id = { notIn: alreadyChecked };
 
 		return where;
 	}

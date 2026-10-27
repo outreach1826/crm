@@ -383,6 +383,13 @@ function ContactOverview({ contact }: { contact: Contact }) {
 						onSave={(githubUrl) => save({ githubUrl })}
 						{...agentProps("githubUrl")}
 					/>
+					<InlineField
+						label="Hugging Face"
+						value={contact.huggingfaceUrl}
+						type="url"
+						saving={isSaving("huggingfaceUrl")}
+						onSave={(huggingfaceUrl) => save({ huggingfaceUrl })}
+					/>
 					<InlineCompanyField
 						value={contact.company?.id ?? NONE}
 						company={contact.company}

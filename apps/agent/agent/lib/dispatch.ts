@@ -1,5 +1,4 @@
 import { EnrichmentStatus } from "@crm/db";
-import { DIRECT_KINDS } from "@crm/db/agent-tasks";
 import { fieldBackfillPayload } from "@crm/validation/field-backfill";
 import { APP_AUTH, type AppAuth } from "./app-auth";
 import { brandOutcome, runBrand } from "./brand";
@@ -13,6 +12,7 @@ import { runPortrait } from "./portrait";
 import { runSlackChannelJoin } from "./slack-join-task";
 import { runSlackPeopleMatch } from "./slack-people";
 import { staleTaskSweep } from "./stale-tasks";
+import { allowedTaskKinds, researchKinds, visibleKinds } from "./task-kinds";
 import { claimDue, completeTask, type LeasedTask, noteSession } from "./tasks";
 
 export const VISIBLE_BATCH = DISPATCH.visible.batch;
@@ -30,7 +30,7 @@ export async function runVisibleLane(signal?: AbortSignal): Promise<number> {
 
 		const tasks = await claimDue(
 			Math.min(VISIBLE_CONCURRENCY, VISIBLE_BATCH - handled),
-			{ only: DIRECT_KINDS },
+			visibleKinds(allowedTaskKinds()),
 			VISIBLE_LEASE_MS,
 		);
 
@@ -140,7 +140,7 @@ export async function runResearchLane(
 
 	const tasks = await claimDue(
 		RESEARCH_BATCH,
-		{ except: DIRECT_KINDS },
+		researchKinds(allowedTaskKinds()),
 		RESEARCH_LEASE_MS,
 	);
 	if (tasks.length === 0) return 0;

@@ -1,6 +1,7 @@
 import LogoGithub from "@carbon/icons-react/es/LogoGithub";
 import LogoLinkedin from "@carbon/icons-react/es/LogoLinkedin";
 import LogoX from "@carbon/icons-react/es/LogoX";
+import MachineLearningModel from "@carbon/icons-react/es/MachineLearningModel";
 import Money from "@carbon/icons-react/es/Money";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
 import type { CarbonIcon } from "@crm/ui/components/icon";
@@ -19,6 +20,7 @@ export type ContactLinks = {
 	linkedinUrl: string | null;
 	twitterUrl: string | null;
 	githubUrl: string | null;
+	huggingfaceUrl: string | null;
 };
 
 const COMPANY_LINKS: SocialLink<CompanyLinks>[] = [
@@ -33,6 +35,7 @@ const CONTACT_LINKS: SocialLink<ContactLinks>[] = [
 	{ key: "linkedinUrl", label: "LinkedIn", icon: LogoLinkedin },
 	{ key: "twitterUrl", label: "X", icon: LogoX },
 	{ key: "githubUrl", label: "GitHub", icon: LogoGithub },
+	{ key: "huggingfaceUrl", label: "Hugging Face", icon: MachineLearningModel },
 ];
 
 function present<T extends Record<string, string | null>>(

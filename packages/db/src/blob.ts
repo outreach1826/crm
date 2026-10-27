@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { isMirrored } from "./images";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
+import { isMirrored as isOnVercelBlob } from "./images";
 import { safeFetch } from "./safe-fetch";
 
-export { isMirrored, isOptimizable } from "./images";
+export { isOptimizable } from "./images";
 
 const MAX_BYTES = 3 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
@@ -20,8 +22,40 @@ const ALLOWED: ExtensionByMediaType = {
 	"image/vnd.microsoft.icon": "ico",
 };
 
-export function blobEnabled(): boolean {
+type LocalMedia = { dir: string; url: string };
+
+function localMedia(): LocalMedia | null {
+	const dir = process.env.MEDIA_DIR?.trim();
+	const url = process.env.MEDIA_URL?.trim().replace(/\/+$/, "");
+	return dir && url ? { dir: resolve(dir), url } : null;
+}
+
+function vercelBlobEnabled(): boolean {
 	return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
+export function blobEnabled(): boolean {
+	return vercelBlobEnabled() || localMedia() !== null;
+}
+
+export function isMirrored(url: string | null | undefined): boolean {
+	if (!url) return false;
+	const local = localMedia();
+	return (
+		isOnVercelBlob(url) || (local !== null && url.startsWith(`${local.url}/`))
+	);
+}
+
+async function storeLocally(
+	media: LocalMedia,
+	name: string,
+	bytes: Buffer,
+): Promise<string | null> {
+	const path = resolve(join(media.dir, name));
+	if (!path.startsWith(media.dir + sep)) return null;
+	await mkdir(dirname(path), { recursive: true });
+	await writeFile(path, bytes);
+	return `${media.url}/${name}`;
 }
 
 export async function mirror(
@@ -48,9 +82,14 @@ export async function mirror(
 			.digest("hex")
 			.slice(0, 12);
 
+		const name = `${prefix}-${digest}.${extension}`;
+
+		const local = vercelBlobEnabled() ? null : localMedia();
+		if (local) return await storeLocally(local, name, bytes);
+
 		const { put } = await import("@vercel/blob");
 
-		const blob = await put(`${prefix}-${digest}.${extension}`, bytes, {
+		const blob = await put(name, bytes, {
 			access: "public",
 			contentType: type,
 			addRandomSuffix: false,

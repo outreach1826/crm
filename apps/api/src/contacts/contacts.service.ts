@@ -164,6 +164,7 @@ export class ContactsService {
 				linkedinUrl: true,
 				twitterUrl: true,
 				githubUrl: true,
+				huggingfaceUrl: true,
 				imageUrl: true,
 				enrichmentStatus: true,
 				enrichmentError: true,
@@ -486,6 +487,9 @@ export class ContactsService {
 		}
 		if (input.githubUrl !== undefined) {
 			data.githubUrl = blankToNull(input.githubUrl);
+		}
+		if (input.huggingfaceUrl !== undefined) {
+			data.huggingfaceUrl = blankToNull(input.huggingfaceUrl);
 		}
 		if (input.companyId !== undefined) {
 			data.company = input.companyId

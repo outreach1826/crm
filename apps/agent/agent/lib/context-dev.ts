@@ -3,6 +3,7 @@ import { APIError } from "context.dev/core/error";
 import { z } from "zod";
 import { contextDevKey } from "./capabilities";
 import { CONTEXT } from "./context-config";
+import { rotatingFetch, usableContextDevKeys } from "./context-keys";
 
 export type JsonSchema = {
 	type?:
@@ -65,21 +66,18 @@ export type SearchResult = {
 	markdown: string | null;
 };
 
-let client: { key: string; api: ContextDev } | null = null;
+let client: ContextDev | null = null;
 
 export async function contextDev(): Promise<ContextDev | null> {
 	const key = await contextDevKey();
+	if (!key) return null;
 
-	if (!key) {
-		client = null;
-		return null;
-	}
+	client ??= new ContextDev({
+		apiKey: key,
+		fetch: rotatingFetch(usableContextDevKeys),
+	});
 
-	if (client?.key !== key) {
-		client = { key, api: new ContextDev({ apiKey: key }) };
-	}
-
-	return client.api;
+	return client;
 }
 
 export async function contextDevEnabled(): Promise<boolean> {

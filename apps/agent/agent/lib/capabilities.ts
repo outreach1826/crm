@@ -1,7 +1,6 @@
 import "@crm/env/load";
 
-import { db } from "@crm/db";
-import { readContextDevKey } from "@crm/db/settings";
+import { usableContextDevKeys } from "./context-keys";
 
 export const CONTEXT_DEV = "CONTEXT_DEV";
 
@@ -18,17 +17,7 @@ export type Capability = {
 };
 
 export async function contextDevKey(): Promise<string | null> {
-	try {
-		return await readContextDevKey(db);
-	} catch (error) {
-		console.error(
-			`[agent] could not read the Context.dev key from the database: ${
-				error instanceof Error ? error.message : String(error)
-			}`,
-		);
-
-		return null;
-	}
+	return (await usableContextDevKeys())[0] ?? null;
 }
 
 export async function capabilities(): Promise<readonly Capability[]> {

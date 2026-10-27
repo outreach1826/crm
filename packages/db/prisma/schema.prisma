@@ -36,6 +36,7 @@ model User {
   oauthApplications OauthApplication[]  @relation("OauthApplicationOwner")
   oauthAccessTokens OauthAccessToken[]  @relation("OauthAccessTokenOwner")
   oauthConsents     OauthConsent[]      @relation("OauthConsentOwner")
+  researchKey       ResearchKey?        @relation("ResearchKeyOwner")
 
   createdAgentDefinitions AgentDefinition[]             @relation("AgentDefinitionCreator")
   createdAgentVersions    AgentVersion[]                @relation("AgentVersionCreator")
@@ -482,18 +483,19 @@ model CompanyEnrichment {
 }
 
 model Contact {
-  id          String  @id @default(cuid())
-  firstName   String
-  lastName    String?
-  email       String?
-  phone       String?
-  title       String?
-  seniority   String?
-  function    String?
-  linkedinUrl String?
-  twitterUrl  String?
-  githubUrl   String?
-  imageUrl    String?
+  id             String  @id @default(cuid())
+  firstName      String
+  lastName       String?
+  email          String?
+  phone          String?
+  title          String?
+  seniority      String?
+  function       String?
+  linkedinUrl    String?
+  twitterUrl     String?
+  githubUrl      String?
+  huggingfaceUrl String?
+  imageUrl       String?
 
   socialsCheckedAt DateTime?
 
@@ -1805,4 +1807,17 @@ model OauthConsent {
   @@index([clientId])
   @@index([userId])
   @@map("oauthConsent")
+}
+
+model ResearchKey {
+  id     String @id @default(cuid())
+  apiKey String
+
+  userId String @unique
+  user   User   @relation("ResearchKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("researchKey")
 }

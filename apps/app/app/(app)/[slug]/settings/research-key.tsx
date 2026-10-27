@@ -32,14 +32,24 @@ export function ResearchKey() {
 	const keyId = useId();
 	const [draft, setDraft] = useState("");
 
-	const key = useQuery(trpc.settings.researchKey.queryOptions());
+	const key = useQuery(trpc.settings.myResearchKey.queryOptions());
 
 	const save = useMutation(
-		trpc.settings.setResearchKey.mutationOptions({
+		trpc.settings.setMyResearchKey.mutationOptions({
 			onSuccess: async () => {
 				await cache.settings();
 				setDraft("");
-				toast.success("Context API key saved.");
+				toast.success("Your Context API key is saved.");
+			},
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const remove = useMutation(
+		trpc.settings.clearMyResearchKey.mutationOptions({
+			onSuccess: async () => {
+				await cache.settings();
+				toast.success("Your Context API key is removed.");
 			},
 			onError: (error) => toast.error(error.message),
 		}),
@@ -47,26 +57,40 @@ export function ResearchKey() {
 
 	if (!key.data) return null;
 
-	const { configured, hint } = key.data;
+	const { configured, hint, teamKeys } = key.data;
+	const busy = save.isPending || remove.isPending;
 
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Company research</CardTitle>
+				<CardTitle>Your Context API key</CardTitle>
 				<CardDescription>
-					Enter your Context API key so our agents can research every company in
-					the CRM.
+					Context finds contact photos and researches companies. Each person can
+					add their own key. The CRM uses the team's keys in turn and moves to
+					the next one when a key runs out of credits for the month.{" "}
+					{teamKeys === 1 ? "1 key is in use." : `${teamKeys} keys are in use.`}
 				</CardDescription>
 
 				<CardAction>
-					<Button
-						type="submit"
-						form="research-key"
-						disabled={save.isPending || draft.trim() === ""}
-					>
-						{save.isPending ? <Spinner data-icon="inline-start" /> : null}
-						{configured ? "Replace key" : "Save key"}
-					</Button>
+					<div className="flex gap-2">
+						{configured ? (
+							<Button
+								variant="outline"
+								disabled={busy}
+								onClick={() => remove.mutate()}
+							>
+								Remove
+							</Button>
+						) : null}
+						<Button
+							type="submit"
+							form="research-key"
+							disabled={busy || draft.trim() === ""}
+						>
+							{save.isPending ? <Spinner data-icon="inline-start" /> : null}
+							{configured ? "Replace key" : "Save key"}
+						</Button>
+					</div>
 				</CardAction>
 			</CardHeader>
 
@@ -98,7 +122,7 @@ export function ResearchKey() {
 								autoCapitalize="off"
 								autoCorrect="off"
 								spellCheck={false}
-								disabled={save.isPending}
+								disabled={busy}
 							/>
 							<FieldDescription>
 								Don't have a Context API key?{" "}

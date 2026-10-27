@@ -38,6 +38,12 @@ export const researchKeyOutput = z.object({
 
 export type ResearchKeySettings = z.infer<typeof researchKeyOutput>;
 
+export const myResearchKeyOutput = researchKeyOutput.extend({
+	teamKeys: z.number(),
+});
+
+export type MyResearchKeySettings = z.infer<typeof myResearchKeyOutput>;
+
 export const archiveRetentionOutput = z.object({
 	days: z.number(),
 });

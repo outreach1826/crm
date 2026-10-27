@@ -75,6 +75,56 @@ export async function writeContextDevKey(db: Db, key: string): Promise<void> {
 	});
 }
 
+export async function readContextDevKeys(db: Db): Promise<string[]> {
+	const [personal, workspace] = await Promise.all([
+		db.researchKey.findMany({
+			select: { apiKey: true },
+			orderBy: { createdAt: "asc" },
+		}),
+		readContextDevKey(db),
+	]);
+
+	const keys = [
+		...personal.map((row) => row.apiKey.trim()),
+		...(workspace ? [workspace] : []),
+	].filter(Boolean);
+
+	return [...new Set(keys)];
+}
+
+export async function readUserContextDevKey(
+	db: Db,
+	userId: string,
+): Promise<string | null> {
+	const row = await db.researchKey.findUnique({
+		where: { userId },
+		select: { apiKey: true },
+	});
+
+	return row?.apiKey.trim() || null;
+}
+
+export async function writeUserContextDevKey(
+	db: Db,
+	userId: string,
+	key: string,
+): Promise<void> {
+	const apiKey = key.trim();
+
+	await db.researchKey.upsert({
+		where: { userId },
+		create: { userId, apiKey },
+		update: { apiKey },
+	});
+}
+
+export async function deleteUserContextDevKey(
+	db: Db,
+	userId: string,
+): Promise<void> {
+	await db.researchKey.deleteMany({ where: { userId } });
+}
+
 export async function readReportingCurrency(db: Db): Promise<string> {
 	const row = await db.appSetting.findUnique({
 		where: { id: SETTINGS_ID },

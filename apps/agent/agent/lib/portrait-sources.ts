@@ -1,10 +1,15 @@
+import { safeFetch } from "@crm/db/safe-fetch";
 import { z } from "zod";
 import { CONTEXT } from "./context-config";
 import { extract, type JsonSchema } from "./context-dev";
 import { namesMatch } from "./names";
 import { personByProfileUrl, slugFromProfileUrl } from "./people";
 
-export type PortraitSource = "linkedin" | "github" | "employer-site";
+export type PortraitSource =
+	| "linkedin"
+	| "huggingface"
+	| "github"
+	| "employer-site";
 
 export type PortraitCandidate = {
 	source: PortraitSource;
@@ -16,6 +21,7 @@ export type PortraitSubject = {
 	name: string | null;
 	linkedinUrl: string | null;
 	githubUrl: string | null;
+	huggingfaceUrl: string | null;
 	companyName: string | null;
 	companyDomain: string | null;
 };
@@ -55,6 +61,15 @@ export async function findPortrait(
 					: "LinkedIn profile could not be read",
 			);
 		}
+	}
+
+	const huggingface = huggingfaceUser(subject.huggingfaceUrl);
+	if (huggingface) {
+		const photo = await huggingfacePhoto(huggingface);
+		if (photo) {
+			return { found: true, candidate: { source: "huggingface", url: photo } };
+		}
+		tried.push("Hugging Face profile has no uploaded picture");
 	}
 
 	const login = githubLogin(subject.githubUrl);
@@ -149,6 +164,60 @@ async function fromEmployerSite(
 	}
 
 	return null;
+}
+
+const HUGGING_FACE = {
+	host: "huggingface.co",
+	avatarHost: "cdn-avatars.huggingface.co",
+	timeoutMs: 10_000,
+} as const;
+
+const huggingfaceOverview = z.object({
+	avatarUrl: z.string().nullable().optional(),
+});
+
+export function huggingfaceUser(raw: string | null): string | null {
+	if (!raw) return null;
+
+	try {
+		const url = new URL(raw.trim());
+		const host = url.hostname.toLowerCase().replace(/^www./, "");
+		if (host !== HUGGING_FACE.host) return null;
+
+		const segments = url.pathname.split("/").filter(Boolean);
+		if (segments.length !== 1) return null;
+
+		const user = segments[0] ?? "";
+		return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(user) ? user : null;
+	} catch {
+		return null;
+	}
+}
+
+export function uploadedHuggingfacePhoto(
+	avatarUrl: string | null | undefined,
+): string | null {
+	if (!avatarUrl || !URL.canParse(avatarUrl)) return null;
+	const url = new URL(avatarUrl);
+	if (url.protocol !== "https:" || url.hostname !== HUGGING_FACE.avatarHost) {
+		return null;
+	}
+	return url.pathname.toLowerCase().endsWith(".svg") ? null : url.toString();
+}
+
+async function huggingfacePhoto(user: string): Promise<string | null> {
+	const result = await safeFetch(
+		`https://${HUGGING_FACE.host}/api/users/${encodeURIComponent(user)}/overview`,
+		{ timeoutMs: HUGGING_FACE.timeoutMs },
+	).catch(() => null);
+	if (!result?.response.ok) return null;
+
+	const parsed = huggingfaceOverview.safeParse(
+		await result.response.json().catch(() => null),
+	);
+	return parsed.success
+		? uploadedHuggingfacePhoto(parsed.data.avatarUrl)
+		: null;
 }
 
 function githubLogin(raw: string | null): string | null {
