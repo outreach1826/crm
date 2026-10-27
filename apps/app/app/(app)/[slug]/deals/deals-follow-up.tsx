@@ -1,6 +1,13 @@
 "use client";
 
 import ChevronDown from "@carbon/icons-react/es/ChevronDown";
+import {
+	FOLLOW_UP,
+	FOLLOW_UP_STAGES,
+	needsFollowUp,
+	type Overdue,
+	snoozeUntil,
+} from "@crm/db/follow-up";
 import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
 import {
@@ -24,13 +31,6 @@ import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
 import { useChangeDealStage } from "@/components/crm/stage-change";
 import { LocalRelativeTime } from "@/components/local-date-time";
 import { dealStageLabel } from "@/lib/deal-stage";
-import {
-	FOLLOW_UP,
-	FOLLOW_UP_STAGES,
-	needsFollowUp,
-	type Overdue,
-	snoozeUntil,
-} from "@/lib/follow-up";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";

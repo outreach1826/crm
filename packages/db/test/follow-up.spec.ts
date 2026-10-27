@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import type { DealStage } from "@crm/db/enums";
 import {
 	FOLLOW_UP,
 	needsFollowUp,
 	quietSince,
 	snoozeUntil,
-} from "../lib/follow-up";
+} from "../src/follow-up";
+import type { DealStage } from "../src/generated/prisma/enums";
 
 const NOW = Date.parse("2026-10-26T12:00:00.000Z");
 

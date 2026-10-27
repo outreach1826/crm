@@ -14,6 +14,7 @@
 		"./deal-stage": "./src/deal-stage.ts",
 		"./enums": "./src/generated/prisma/enums.ts",
 		"./favicon": "./src/favicon.ts",
+		"./follow-up": "./src/follow-up.ts",
 		"./fields": "./src/fields.ts",
 		"./fields-shape": "./src/fields-shape.ts",
 		"./fx": "./src/fx.ts",

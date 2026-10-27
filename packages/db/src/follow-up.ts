@@ -1,4 +1,4 @@
-import { DealStage } from "@crm/db/enums";
+import { DealStage } from "./generated/prisma/enums";
 
 const DAY_MS = 86_400_000;
 
