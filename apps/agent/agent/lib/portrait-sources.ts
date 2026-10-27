@@ -49,6 +49,9 @@ export async function findPortrait(
 			const result = await personByProfileUrl(
 				`https://www.linkedin.com/in/${slug}`,
 			);
+			if (result.outcome === "failed" && result.retryable) {
+				throw new Error(`Context could not answer for now: ${result.reason}`);
+			}
 			if (result.outcome === "found" && result.person.photoUrl) {
 				return {
 					found: true,
