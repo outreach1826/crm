@@ -47,3 +47,7 @@ change the CRM with a normal CRM API key or an OAuth sign-in.
 - **Routing:** the reverse proxy sends `/mcp` and `/.well-known/oauth-protected-resource`
   to the MCP server. `/mcp/health` answers
   `{ "ok": true }`.
+- **`docs/skills/7crawl-crm/SKILL.md` is the skill for AI assistants** that use these
+  tools: workflows, business rules and answer formats. `7crawl-crm.skill` is the same
+  file zipped for upload to Claude. Rebuild the zip and update both when a tool or a
+  rule changes.
