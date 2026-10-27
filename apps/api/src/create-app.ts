@@ -81,14 +81,22 @@ export async function createApp(): Promise<NestExpressApplication> {
 					`REST surface of the CRM API — auth, health, the internal cron routes, and a generated REST bridge (under ${REST_BRIDGE_PATH}) for every tRPC procedure.`,
 				)
 				.setVersion("1.0")
+				.addServer(apiUrl)
 				.addCookieAuth(SESSION_COOKIE_NAME)
 				.addApiKey(apiKeySecurityScheme, "apiKey")
 				.build();
 			const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
 
+			const bridgePaths = Object.fromEntries(
+				Object.entries(trpcDocument.paths ?? {}).map(([path, item]) => [
+					`${REST_BRIDGE_PATH}${path}`,
+					item,
+				]),
+			) as typeof swaggerDocument.paths;
+
 			swaggerDocument.paths = {
 				...swaggerDocument.paths,
-				...(trpcDocument.paths as typeof swaggerDocument.paths),
+				...bridgePaths,
 			};
 			swaggerDocument.components = {
 				...swaggerDocument.components,
