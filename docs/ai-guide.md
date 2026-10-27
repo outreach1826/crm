@@ -27,17 +27,17 @@ Deals move left to right. The board in the app shows one column per stage.
 
 | Stage | Label | Meaning |
 | --- | --- | --- |
-| `DEMO_BOOKED` | Demo booked | A first call or demo is on the calendar. New deals start here. |
-| `QUALIFIED_TO_BUY` | Qualified to buy | The company needs the data and has budget. |
-| `DECISION_MAKER_BOUGHT_IN` | Decision maker in | The person who signs agrees. |
-| `CONTRACT_SENT` | Contract sent | The contract or order form is out. |
-| `CLOSED_WON` | Closed won | The customer signed. |
-| `CLOSED_LOST` | Closed lost | The customer said no. Needs a reason. |
-| `UNQUALIFIED_TO_BUY` | Unqualified | The company is not a fit. Needs a reason. |
+| `DEMO_BOOKED` | Sample requested | The buyer replied and told us what to scrape. We owe them a free sample. New deals start here. |
+| `QUALIFIED_TO_BUY` | Sample sent | We delivered the sample. We wait for their feedback. |
+| `DECISION_MAKER_BOUGHT_IN` | Negotiating | They want the data. We agree price, volume, format and delivery schedule. |
+| `CONTRACT_SENT` | Invoice sent | The contract or invoice is out. We wait for payment. |
+| `CLOSED_WON` | Won (paid) | The customer paid or signed. |
+| `CLOSED_LOST` | Lost | The customer said no. Needs a reason. |
+| `UNQUALIFIED_TO_BUY` | Not a fit | No budget, wrong data or not an AI buyer. Needs a reason. |
 
 The first four stages are **open**. The last three are **closed**. Use
 `move_deal_stage` to change a stage. Ask the user for the reason before you close a
-deal as lost or unqualified.
+deal as Lost or Not a fit.
 
 ## Follow-ups
 
@@ -47,10 +47,10 @@ deal needs a follow-up when it is quiet for longer than its stage allows:
 
 | Stage | Limit |
 | --- | --- |
-| Demo booked | 7 days |
-| Qualified to buy | 7 days |
-| Decision maker in | 5 days |
-| Contract sent | 3 days |
+| Sample requested | 3 days |
+| Sample sent | 4 days |
+| Negotiating | 5 days |
+| Invoice sent | 3 days |
 
 `pipeline_overview` returns the list `needsFollowUp`, most overdue first. To clear a
 deal from the list:

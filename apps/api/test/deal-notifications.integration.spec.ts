@@ -103,7 +103,7 @@ describe("DealNotifications", () => {
 			"Deal lost",
 		]);
 		expect(calls[0]?.message.body).toBe(
-			"Ana moved Web crawl dataset to Contract sent",
+			"Ana moved Web crawl dataset to Invoice sent",
 		);
 	});
 

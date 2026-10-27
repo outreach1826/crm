@@ -578,7 +578,7 @@ export function registerTools(
 		{
 			title: "Create a deal",
 			description:
-				"Opens a deal on a company. Every deal needs a company and an owner. The stage starts at Demo booked unless you give one.",
+				"Opens a deal on a company. Every deal needs a company and an owner. The stage starts at Sample requested unless you give one.",
 			inputSchema: {
 				name: z.string().min(1),
 				companyId: id,
@@ -666,7 +666,7 @@ export function registerTools(
 		"move_deal_stage",
 		{
 			title: "Move a deal to a stage",
-			description: `Moves one deal to a new stage. Closed lost and Unqualified need a reason. Stages in order: ${Object.values(DEAL_STAGE_LABELS).join(", ")}.`,
+			description: `Moves one deal to a new stage. Lost and Not a fit need a reason. Stages in order: ${Object.values(DEAL_STAGE_LABELS).join(", ")}.`,
 			inputSchema: {
 				id,
 				stage,

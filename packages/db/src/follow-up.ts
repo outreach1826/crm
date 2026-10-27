@@ -4,8 +4,8 @@ const DAY_MS = 86_400_000;
 
 export const FOLLOW_UP = {
 	quietDays: {
-		[DealStage.DEMO_BOOKED]: 7,
-		[DealStage.QUALIFIED_TO_BUY]: 7,
+		[DealStage.DEMO_BOOKED]: 3,
+		[DealStage.QUALIFIED_TO_BUY]: 4,
 		[DealStage.DECISION_MAKER_BOUGHT_IN]: 5,
 		[DealStage.CONTRACT_SENT]: 3,
 	},

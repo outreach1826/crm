@@ -19,13 +19,13 @@ export const LOSING_DEAL_STAGES = [
 ] as const;
 
 export const DEAL_STAGE_LABELS = {
-	[DealStage.DEMO_BOOKED]: "Demo booked",
-	[DealStage.QUALIFIED_TO_BUY]: "Qualified to buy",
-	[DealStage.DECISION_MAKER_BOUGHT_IN]: "Decision maker in",
-	[DealStage.CONTRACT_SENT]: "Contract sent",
-	[DealStage.CLOSED_WON]: "Closed won",
-	[DealStage.CLOSED_LOST]: "Closed lost",
-	[DealStage.UNQUALIFIED_TO_BUY]: "Unqualified",
+	[DealStage.DEMO_BOOKED]: "Sample requested",
+	[DealStage.QUALIFIED_TO_BUY]: "Sample sent",
+	[DealStage.DECISION_MAKER_BOUGHT_IN]: "Negotiating",
+	[DealStage.CONTRACT_SENT]: "Invoice sent",
+	[DealStage.CLOSED_WON]: "Won (paid)",
+	[DealStage.CLOSED_LOST]: "Lost",
+	[DealStage.UNQUALIFIED_TO_BUY]: "Not a fit",
 } as const satisfies Record<DealStage, string>;
 
 const CLOSED = new Set<DealStage>(CLOSED_DEAL_STAGES);
