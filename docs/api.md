@@ -214,6 +214,14 @@ Two rules follow for the serverless build:
 - **`isAutomatedAddress` is a separate list about the local part** (`sales@`,
   `noreply@`), which is why `support@acme.com` never becomes a lead.
 
+## A deal's timeline includes its mail
+
+`ActivitiesService.dealAnchor` widens a deal's timeline and counts to the synced email
+threads (`emailThreadId` set, `dealId` null) of the deal's company and of every
+contact on the deal. The sync files a thread on a contact and company, never on a
+deal, because one company can have several deals. Notes, calls and tasks still show
+only where they were logged. The MCP `get_timeline` tool reads the same procedure.
+
 ## People on a deal
 
 `DealContact` is the join, and `deals.attachContact` / `detachContact` /

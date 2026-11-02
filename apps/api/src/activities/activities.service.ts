@@ -78,8 +78,9 @@ export class ActivitiesService {
 	) {}
 
 	async timeline(input: TimelineInput): Promise<TimelineResult> {
-		const where = this.anchor(input);
-		Object.assign(where, filterClause(input.filter));
+		const where = {
+			AND: [await this.anchor(input), filterClause(input.filter)],
+		};
 
 		const rows = await this.db.activity.findMany({
 			where,
@@ -105,23 +106,19 @@ export class ActivitiesService {
 	async timelineCounts(
 		input: Pick<TimelineInput, "companyId" | "contactId" | "dealId">,
 	): Promise<TimelineCounts> {
-		const anchor = this.anchor(input);
+		const anchor = await this.anchor(input);
+		const count = (filter: TimelineFilter) =>
+			this.db.activity.count({
+				where: { AND: [anchor, filterClause(filter)] },
+			});
 
 		const [all, notes, upcoming, done, email, meetings] = await Promise.all([
-			this.db.activity.count({ where: anchor }),
-			this.db.activity.count({
-				where: { ...anchor, ...filterClause("notes") },
-			}),
-			this.db.activity.count({
-				where: { ...anchor, ...filterClause("upcoming") },
-			}),
-			this.db.activity.count({ where: { ...anchor, ...filterClause("done") } }),
-			this.db.activity.count({
-				where: { ...anchor, ...filterClause("email") },
-			}),
-			this.db.activity.count({
-				where: { ...anchor, ...filterClause("meetings") },
-			}),
+			count("all"),
+			count("notes"),
+			count("upcoming"),
+			count("done"),
+			count("email"),
+			count("meetings"),
 		]);
 
 		return { all, notes, upcoming, done, email, meetings };
@@ -214,15 +211,38 @@ export class ActivitiesService {
 		return tasks.map(serializeEntry);
 	}
 
-	private anchor(
+	private async anchor(
 		input: Pick<TimelineInput, "companyId" | "contactId" | "dealId">,
-	): Prisma.ActivityWhereInput {
-		if (input.dealId) return { dealId: input.dealId };
+	): Promise<Prisma.ActivityWhereInput> {
+		if (input.dealId) return this.dealAnchor(input.dealId);
 		if (input.contactId) return { contactId: input.contactId };
 		if (input.companyId) return { companyId: input.companyId };
 		throw new BadRequestException(
 			"A timeline needs a company, a contact or a deal.",
 		);
+	}
+
+	private async dealAnchor(dealId: string): Promise<Prisma.ActivityWhereInput> {
+		const deal = await this.db.deal.findUnique({
+			where: { id: dealId },
+			select: { companyId: true, contacts: { select: { contactId: true } } },
+		});
+		if (!deal) return { dealId };
+
+		const people = deal.contacts.map((link) => link.contactId);
+		return {
+			OR: [
+				{ dealId },
+				{
+					dealId: null,
+					emailThreadId: { not: null },
+					OR: [
+						{ companyId: deal.companyId },
+						...(people.length > 0 ? [{ contactId: { in: people } }] : []),
+					],
+				},
+			],
+		};
 	}
 
 	private async resolveCompanyId(
