@@ -1,6 +1,7 @@
 "use client";
 
 import type { DealStage } from "@crm/db/enums";
+import { quietState } from "@crm/db/follow-up";
 import { Badge } from "@crm/ui/components/badge";
 import {
 	KanbanBoard,
@@ -74,9 +75,17 @@ function moveCard(board: Board, dealId: string, to: DealStage): Board {
 	};
 }
 
+function quietLabel(days: number): string {
+	if (days === 0) return "Moved today";
+	return days === 1
+		? "1 day since any movement"
+		: `${days} days since any movement`;
+}
+
 function DealCard({ card }: { card: BoardCard }) {
 	const openRecord = useOpenRecord();
 	const prefetchRecord = usePrefetchRecord();
+	const quiet = quietState(card, Date.now());
 
 	return (
 		<KanbanCard id={card.id} label={card.name}>
@@ -109,6 +118,15 @@ function DealCard({ card }: { card: BoardCard }) {
 				<OwnerCell owner={card.owner} compact />
 				<DealStageMenu dealId={card.id} stage={card.stage} />
 			</div>
+
+			{quiet ? (
+				<Badge
+					variant={quiet.overdue ? "destructive" : "secondary"}
+					title={`Answer within ${quiet.limitDays} days in this stage`}
+				>
+					{quietLabel(quiet.quietDays)}
+				</Badge>
+			) : null}
 
 			<span className="text-muted-foreground text-xs">
 				{card.lastActivityAt ? (

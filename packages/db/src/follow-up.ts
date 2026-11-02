@@ -41,20 +41,44 @@ export function quietSince(deal: FollowUpDeal): string {
 		: deal.stageChangedAt;
 }
 
+export type QuietState = {
+	quietSince: string;
+	quietDays: number;
+	limitDays: number;
+	overdue: boolean;
+};
+
+export function quietState(deal: FollowUpDeal, now: number): QuietState | null {
+	if (!hasLimit(deal.stage)) return null;
+
+	const since = quietSince(deal);
+	const quietDays = Math.max(0, Math.floor((now - Date.parse(since)) / DAY_MS));
+	const limitDays = FOLLOW_UP.quietDays[deal.stage];
+
+	return {
+		quietSince: since,
+		quietDays,
+		limitDays,
+		overdue: quietDays >= limitDays,
+	};
+}
+
 export function needsFollowUp<TDeal extends FollowUpDeal>(
 	deals: readonly TDeal[],
 	now: number,
 ): Overdue<TDeal>[] {
 	return deals
 		.flatMap((deal) => {
-			if (!hasLimit(deal.stage)) return [];
-
-			const since = quietSince(deal);
-			const quietDays = Math.floor((now - Date.parse(since)) / DAY_MS);
-			const limitDays = FOLLOW_UP.quietDays[deal.stage];
-
-			return quietDays >= limitDays
-				? [{ deal, quietSince: since, quietDays, limitDays }]
+			const state = quietState(deal, now);
+			return state?.overdue
+				? [
+						{
+							deal,
+							quietSince: state.quietSince,
+							quietDays: state.quietDays,
+							limitDays: state.limitDays,
+						},
+					]
 				: [];
 		})
 		.sort((a, b) => b.quietDays - b.limitDays - (a.quietDays - a.limitDays));

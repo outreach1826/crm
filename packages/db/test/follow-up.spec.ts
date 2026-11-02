@@ -3,6 +3,7 @@ import {
 	FOLLOW_UP,
 	needsFollowUp,
 	quietSince,
+	quietState,
 	snoozeUntil,
 } from "../src/follow-up";
 import type { DealStage } from "../src/generated/prisma/enums";
@@ -27,6 +28,27 @@ function deal(
 			lastActivityDaysAgo === null ? null : daysAgo(lastActivityDaysAgo),
 	};
 }
+
+describe("quietState", () => {
+	it("counts whole days since the last move on a stage that needs an answer", () => {
+		expect(quietState(deal("a", "QUALIFIED_TO_BUY", 9, 2), NOW)).toEqual({
+			quietSince: daysAgo(2),
+			quietDays: 2,
+			limitDays: FOLLOW_UP.quietDays.QUALIFIED_TO_BUY,
+			overdue: false,
+		});
+	});
+
+	it("marks a deal overdue once it reaches its stage limit", () => {
+		expect(quietState(deal("a", "DEMO_BOOKED", 3, null), NOW)?.overdue).toBe(
+			true,
+		);
+	});
+
+	it("has nothing to say about a stage without a limit", () => {
+		expect(quietState(deal("a", "CLOSED_WON", 30, null), NOW)).toBeNull();
+	});
+});
 
 describe("quietSince", () => {
 	it("uses the stage change when nothing has happened since", () => {
