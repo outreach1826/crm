@@ -8,16 +8,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const decision = z.object({ redirectURI: z.url() });
+const decision = z.object({ url: z.url() });
 
 type Choice = "allow" | "deny";
 
 export function OAuthConsent({
-	consentCode,
+	oauthQuery,
 	name,
 	redirectHosts,
 }: {
-	consentCode: string;
+	oauthQuery: string;
 	name: string;
 	redirectHosts: string[];
 }) {
@@ -30,7 +30,7 @@ export function OAuthConsent({
 			OAUTH_PROVIDER.paths.consent,
 			{
 				method: "POST",
-				body: { accept: choice === "allow", consent_code: consentCode },
+				body: { accept: choice === "allow", oauth_query: oauthQuery },
 			},
 		);
 
@@ -41,7 +41,7 @@ export function OAuthConsent({
 			return;
 		}
 
-		window.location.assign(parsed.data.redirectURI);
+		window.location.assign(parsed.data.url);
 	}
 
 	return (

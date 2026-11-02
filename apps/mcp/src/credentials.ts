@@ -1,5 +1,6 @@
 import { API_KEY_HEADER, API_KEY_PREFIX } from "@crm/auth/api-keys";
 import { OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
+import { verifyOAuthAccessToken } from "@crm/auth/oauth-token";
 import { z } from "zod";
 
 export type Credential =
@@ -31,20 +32,27 @@ export function credentialHeaders(
 	return headers;
 }
 
-const tokenSession = z.object({ userId: z.string().min(1) }).nullable();
+const jwksCacheKey = {};
+
+const jwkSet = z.object({ keys: z.array(z.looseObject({ kty: z.string() })) });
 
 export async function isLiveOAuthToken(options: {
 	apiUrl: string;
+	publicUrl: string;
 	token: string;
 	fetch: typeof fetch;
 }): Promise<boolean> {
-	const response = await options.fetch(
-		`${options.apiUrl}/api/auth${OAUTH_PROVIDER.paths.session}`,
-		{ headers: { authorization: `Bearer ${options.token}` } },
-	);
-	if (!response.ok) return false;
-	const parsed = tokenSession.safeParse(
-		await response.json().catch(() => null),
-	);
-	return parsed.success && parsed.data !== null;
+	const verified = await verifyOAuthAccessToken(options.token, {
+		publicApiUrl: options.publicUrl,
+		jwksCacheKey,
+		jwks: async () => {
+			const response = await options.fetch(
+				`${options.apiUrl}${OAUTH_PROVIDER.authBasePath}${OAUTH_PROVIDER.paths.jwks}`,
+			);
+			if (!response.ok) return undefined;
+			const parsed = jwkSet.safeParse(await response.json().catch(() => null));
+			return parsed.success ? parsed.data : undefined;
+		},
+	});
+	return verified !== null;
 }

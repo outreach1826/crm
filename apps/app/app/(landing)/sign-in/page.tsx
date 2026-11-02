@@ -69,7 +69,7 @@ function oauthContinuation(
 		}
 	}
 	if (!isOAuthAuthorizeQuery(query)) return null;
-	return `/api/auth${OAUTH_PROVIDER.paths.authorize}?${query}`;
+	return `${OAUTH_PROVIDER.authBasePath}${OAUTH_PROVIDER.paths.authorize}?${query}`;
 }
 
 async function SignIn({

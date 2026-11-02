@@ -1,3 +1,4 @@
+import { isOAuthAuthorizeQuery } from "@crm/auth/oauth-paths";
 import type { Metadata } from "next";
 import { unstable_rethrow } from "next/navigation";
 import { AuthHeading, AuthShell } from "@/components/auth-shell";
@@ -11,9 +12,16 @@ export const metadata: Metadata = {
 
 export const instant = false;
 
-function single(value: string | string[] | undefined): string | null {
-	const first = [value].flat()[0];
-	return first?.trim() ? first.trim() : null;
+function signedQuery(
+	params: Awaited<PageProps<"/oauth/consent">["searchParams"]>,
+): URLSearchParams | null {
+	const query = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		for (const entry of [value].flat()) {
+			if (entry !== undefined) query.append(key, entry);
+		}
+	}
+	return isOAuthAuthorizeQuery(query) ? query : null;
 }
 
 async function describeClient(clientId: string) {
@@ -32,12 +40,11 @@ export default async function OAuthConsentPage({
 	searchParams,
 }: PageProps<"/oauth/consent">) {
 	const { user } = await requireSession();
-	const params = await searchParams;
-	const consentCode = single(params.consent_code);
-	const clientId = single(params.client_id);
+	const query = signedQuery(await searchParams);
+	const clientId = query?.get("client_id");
 	const client = clientId ? await describeClient(clientId) : null;
 
-	if (!consentCode || !client) {
+	if (!query || !client) {
 		return (
 			<AuthShell>
 				<AuthHeading
@@ -58,7 +65,7 @@ export default async function OAuthConsentPage({
 			/>
 
 			<OAuthConsent
-				consentCode={consentCode}
+				oauthQuery={query.toString()}
 				name={name}
 				redirectHosts={client.redirectHosts}
 			/>

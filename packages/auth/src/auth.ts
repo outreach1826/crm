@@ -34,7 +34,7 @@ import {
 const socialProviders: NonNullable<BetterAuthOptions["socialProviders"]> = {};
 const slackOAuth = env.slack;
 const slackRedirectUri = new URL(
-	"/api/auth/oauth2/callback/slack",
+	"/api/auth/callback/slack",
 	env.apiUrl,
 ).toString();
 

@@ -544,6 +544,11 @@ const appRouter = t.router({
       .output(fieldBackfillOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  freshness: t.router({
+    stamp: publicProcedure
+      .output(freshnessStampOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   google: t.router({
     status: publicProcedure
       .output(googleConnectionStatusOutput)
@@ -620,11 +625,6 @@ const appRouter = t.router({
       .input(setOutlookAutoCreateInput)
       .output(microsoftConnectionStatusOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
-    }),
-  freshness: t.router({
-    stamp: publicProcedure
-      .output(freshnessStampOutput)
-      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
   oauthClients: t.router({
     describe: publicProcedure

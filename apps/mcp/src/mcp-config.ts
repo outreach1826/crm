@@ -1,3 +1,5 @@
+import { OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
+
 export const MCP = {
 	server: { name: "7crawl-crm", version: "1.0.0" },
 	paths: {
@@ -7,7 +9,7 @@ export const MCP = {
 		protectedResource: "/.well-known/oauth-protected-resource",
 	},
 	resourceName: "7crawl CRM",
-	scopes: ["openid", "profile", "email", "offline_access"],
+	scopes: OAUTH_PROVIDER.scopes,
 	guideUri: "crm://guide",
 	restPrefix: "/rest",
 	defaults: {

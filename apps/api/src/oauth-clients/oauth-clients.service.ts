@@ -7,11 +7,10 @@ import type {
 	describeOAuthClientOutput,
 } from "./oauth-clients.contracts";
 
-function redirectHosts(redirectUrls: string): string[] {
-	const hosts = redirectUrls.split(",").flatMap((url) => {
-		if (!URL.canParse(url.trim())) return [];
-		return [new URL(url.trim()).host];
-	});
+function redirectHosts(redirectUris: string[]): string[] {
+	const hosts = redirectUris.flatMap((url) =>
+		URL.canParse(url) ? [new URL(url).host] : [],
+	);
 	return [...new Set(hosts)];
 }
 
@@ -22,12 +21,12 @@ export class OAuthClientsService {
 	async describe(
 		clientId: string,
 	): Promise<z.infer<typeof describeOAuthClientOutput>> {
-		const client = await this.db.oauthApplication.findUnique({
+		const client = await this.db.oauthClient.findUnique({
 			where: { clientId },
 			select: {
 				clientId: true,
 				name: true,
-				redirectUrls: true,
+				redirectUris: true,
 				disabled: true,
 			},
 		});
@@ -35,35 +34,42 @@ export class OAuthClientsService {
 		return {
 			clientId: client.clientId,
 			name: client.name,
-			redirectHosts: redirectHosts(client.redirectUrls),
+			redirectHosts: redirectHosts(client.redirectUris),
 		};
 	}
 
 	async connected(
 		userId: string,
 	): Promise<z.infer<typeof connectedOAuthClientsOutput>> {
-		const clients = await this.db.oauthApplication.findMany({
-			where: { accessTokens: { some: { userId } } },
+		const clients = await this.db.oauthClient.findMany({
+			where: { oauthconsents: { some: { userId } } },
 			select: {
 				clientId: true,
 				name: true,
-				redirectUrls: true,
-				accessTokens: {
+				redirectUris: true,
+				oauthconsents: {
 					where: { userId },
 					select: { createdAt: true },
 					orderBy: { createdAt: "asc" },
+					take: 1,
+				},
+				oauthrefreshtokens: {
+					where: { userId },
+					select: { createdAt: true },
+					orderBy: { createdAt: "desc" },
+					take: 1,
 				},
 			},
 		});
 
 		return clients
 			.map((client) => {
-				const first = client.accessTokens[0]?.createdAt ?? new Date(0);
-				const last = client.accessTokens.at(-1)?.createdAt ?? first;
+				const first = client.oauthconsents[0]?.createdAt ?? new Date(0);
+				const last = client.oauthrefreshtokens[0]?.createdAt ?? first;
 				return {
 					clientId: client.clientId,
 					name: client.name,
-					redirectHosts: redirectHosts(client.redirectUrls),
+					redirectHosts: redirectHosts(client.redirectUris),
 					connectedAt: first.toISOString(),
 					lastTokenAt: last.toISOString(),
 				};
@@ -72,10 +78,11 @@ export class OAuthClientsService {
 	}
 
 	async disconnect(userId: string, clientId: string): Promise<boolean> {
-		const [tokens] = await this.db.$transaction([
-			this.db.oauthAccessToken.deleteMany({ where: { userId, clientId } }),
+		const [consents] = await this.db.$transaction([
 			this.db.oauthConsent.deleteMany({ where: { userId, clientId } }),
+			this.db.oauthRefreshToken.deleteMany({ where: { userId, clientId } }),
+			this.db.oauthAccessToken.deleteMany({ where: { userId, clientId } }),
 		]);
-		return tokens.count > 0;
+		return consents.count > 0;
 	}
 }

@@ -50,9 +50,9 @@ is one POST.
 
 `slackConnectGuard` (`packages/auth/src/slack-connect.ts`) is Better Auth's
 `hooks.before`, and it asks the same `canManageConnections` the API does. It
-covers all three doors: `/oauth2/link`, `/sign-in/oauth2` (Slack is a connection,
+covers all three doors: `/link-social`, `/sign-in/social` (Slack is a connection,
 never a sign-in method, and that endpoint needs no session) and
-`/oauth2/callback/slack`. The callback is the one that matters — refusing there
+`/callback/slack`. The callback is the one that matters — refusing there
 happens **before the code is exchanged**, so a refused attempt writes no
 `SlackWorkspaceGrant` user token and deletes no bot token. Google and Microsoft
 sign in on different paths and never reach the guard.

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { generateKeyPairSync, sign } from "node:crypto";
 import { z } from "zod";
 import { readConfig } from "../src/config";
 import { readCredential } from "../src/credentials";
@@ -18,6 +19,42 @@ const KEY = "crm_test_key";
 const BRIDGE_SECRET = "bridge-secret-for-tests-0123456789";
 const NOW = Date.now();
 const DAY = 86_400_000;
+
+const signingKey = generateKeyPairSync("ed25519");
+const JWK = {
+	...signingKey.publicKey.export({ format: "jwk" }),
+	kid: "test-key",
+	alg: "EdDSA",
+	use: "sig",
+};
+
+function accessToken(expiresInSeconds: number): string {
+	const now = Math.floor(NOW / 1000);
+	const encode = (value: Record<string, string | number>) =>
+		Buffer.from(JSON.stringify(value)).toString("base64url");
+	const unsigned = `${encode({ alg: "EdDSA", kid: "test-key", typ: "JWT" })}.${encode(
+		{
+			iss: "https://crm.example/api/auth",
+			aud: "https://crm.example/mcp",
+			sub: "user_1",
+			azp: "client_1",
+			iat: now,
+			exp: now + expiresInSeconds,
+		},
+	)}`;
+	const signature = sign(
+		null,
+		Buffer.from(unsigned),
+		signingKey.privateKey,
+	).toString("base64url");
+	return `${unsigned}.${signature}`;
+}
+
+function servesJwks(call: Sent, otherwise: () => Response): Response {
+	return call.url.pathname === "/api/auth/jwks"
+		? Response.json({ keys: [JWK] })
+		: otherwise();
+}
 
 function fakeApi(
 	answer: (sent: Sent) => Response = () => Response.json({}),
@@ -257,32 +294,27 @@ describe("signing in with OAuth", () => {
 		);
 		expect(await response.json()).toMatchObject({
 			resource: "https://crm.example/mcp",
-			authorization_servers: ["https://crm.example"],
+			authorization_servers: ["https://crm.example/api/auth"],
 		});
 	});
 
 	it("checks an OAuth token, then forwards it to the CRM", async () => {
+		const token = accessToken(3600);
 		const { handle, sent } = fakeApi((call) =>
-			Response.json(
-				call.url.pathname.endsWith("/mcp/get-session")
-					? { userId: "user_1" }
-					: [],
-			),
+			servesJwks(call, () => Response.json([])),
 		);
 		const response = await rpc(
 			handle,
 			"tools/call",
 			{ name: "list_team", arguments: {} },
-			{ authorization: "Bearer oauth-token" },
+			{ authorization: `Bearer ${token}` },
 		);
 		expect(response.status).toBe(200);
-		expect(sent.map((call) => call.url.pathname)).toEqual([
-			"/api/auth/mcp/get-session",
-			"/rest/users",
-		]);
-		expect(sent[1]?.authorization).toBe("Bearer oauth-token");
-		expect(sent[1]?.bridge).toBe(BRIDGE_SECRET);
-		expect(sent[1]?.key).toBeNull();
+		const forwarded = sent.at(-1);
+		expect(forwarded?.url.pathname).toBe("/rest/users");
+		expect(forwarded?.authorization).toBe(`Bearer ${token}`);
+		expect(forwarded?.bridge).toBe(BRIDGE_SECRET);
+		expect(forwarded?.key).toBeNull();
 	});
 
 	it("refuses OAuth when the server has no bridge secret", async () => {
@@ -305,18 +337,22 @@ describe("signing in with OAuth", () => {
 	});
 
 	it("answers 401 invalid_token for an expired OAuth token", async () => {
-		const { handle, sent } = fakeApi(() => Response.json(null));
+		const { handle, sent } = fakeApi((call) =>
+			servesJwks(call, () => Response.json([])),
+		);
 		const response = await rpc(
 			handle,
 			"tools/list",
 			{},
-			{ authorization: "Bearer expired-token" },
+			{ authorization: `Bearer ${accessToken(-60)}` },
 		);
 		expect(response.status).toBe(401);
 		expect(response.headers.get("www-authenticate")).toContain(
 			`error="invalid_token"`,
 		);
-		expect(sent).toHaveLength(1);
+		expect(
+			sent.filter((call) => call.url.pathname.startsWith("/rest")),
+		).toEqual([]);
 	});
 });
 

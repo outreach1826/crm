@@ -19,10 +19,14 @@ process.env.ALLOWED_SIGN_IN = [previousAllowList, DOMAIN]
 
 const { db } = await import("@crm/db");
 const { apiUrl, appUrl } = await import("@crm/auth/env");
-const { OAUTH_PROVIDER } = await import("@crm/auth/oauth-paths");
+const { OAUTH_PROVIDER, mcpResource, oauthIssuer } = await import(
+	"@crm/auth/oauth-paths"
+);
+const RESOURCE = mcpResource(apiUrl);
+const AUTH = OAUTH_PROVIDER.authBasePath;
 
 const registered = z.object({ client_id: z.string() });
-const consented = z.object({ redirectURI: z.string() });
+const consented = z.object({ url: z.string() });
 const tokens = z.object({
 	access_token: z.string(),
 	refresh_token: z.string(),
@@ -67,38 +71,38 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 			state: "state-1",
 			code_challenge: challenge,
 			code_challenge_method: "S256",
+			resource: RESOURCE,
 		});
 		const call = request(server).get(
-			`/api/auth${OAUTH_PROVIDER.paths.authorize}?${query}`,
+			`${AUTH}${OAUTH_PROVIDER.paths.authorize}?${query}`,
 		);
 		return withCookie ? call.set("cookie", cookie) : call;
 	}
 
-	async function consentCode(challenge: string): Promise<string> {
+	async function consentQuery(challenge: string): Promise<string> {
 		const response = await authorize(challenge, true);
 		const consent = locationOf(response);
 		expect(`${consent.origin}${consent.pathname}`).toBe(
 			new URL(OAUTH_PROVIDER.pages.consent, appUrl).toString(),
 		);
-		const code = consent.searchParams.get("consent_code");
-		if (!code) throw new Error("No consent code");
-		return code;
+		if (!consent.searchParams.get("sig")) throw new Error("No signed query");
+		return consent.search.slice(1);
 	}
 
 	async function grant(): Promise<z.infer<typeof tokens>> {
 		const { verifier, challenge } = pkce();
-		const code = await consentCode(challenge);
+		const oauthQuery = await consentQuery(challenge);
 		const consent = await request(server)
-			.post(`/api/auth${OAUTH_PROVIDER.paths.consent}`)
+			.post(`${AUTH}${OAUTH_PROVIDER.paths.consent}`)
 			.set("cookie", cookie)
 			.set("origin", apiUrl)
-			.send({ accept: true, consent_code: code })
+			.send({ accept: true, oauth_query: oauthQuery })
 			.expect(200);
-		const back = new URL(consented.parse(consent.body).redirectURI);
+		const back = new URL(consented.parse(consent.body).url);
 		expect(back.searchParams.get("state")).toBe("state-1");
 
 		const exchanged = await request(server)
-			.post("/api/auth/mcp/token")
+			.post(`${AUTH}/oauth2/token`)
 			.type("form")
 			.send({
 				grant_type: "authorization_code",
@@ -106,6 +110,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 				redirect_uri: REDIRECT,
 				client_id: clientId,
 				code_verifier: verifier,
+				resource: RESOURCE,
 			})
 			.expect(200);
 		return tokens.parse(exchanged.body);
@@ -113,6 +118,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 
 	beforeAll(async () => {
 		await db.user.deleteMany({ where: { email: EMAIL } });
+		await db.rateLimit.deleteMany({ where: { key: { contains: "/oauth2/" } } });
 		const { createApp } = await import("../src/create-app");
 		app = await createApp();
 		server = app.getHttpServer();
@@ -129,7 +135,7 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		cookie = cookiesOf(signUp);
 
 		const registration = await request(server)
-			.post("/api/auth/mcp/register")
+			.post(`${AUTH}/oauth2/register`)
 			.send({
 				client_name: "Test AI",
 				redirect_uris: [REDIRECT],
@@ -142,11 +148,22 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await db.oauthApplication.deleteMany({ where: { clientId } });
+		await db.oauthClient.deleteMany({ where: { clientId } });
 		await db.user.deleteMany({ where: { email: EMAIL } });
 		process.env.ALLOWED_SIGN_IN = previousAllowList;
 		process.env.MCP_SERVER_SECRET = previousBridgeSecret;
 		await app.close();
+	});
+
+	it("publishes its OAuth metadata under the issuer", async () => {
+		const response = await request(server)
+			.get(`${AUTH}${OAUTH_PROVIDER.paths.authServerMetadata}`)
+			.expect(200);
+		expect(response.body).toMatchObject({
+			issuer: oauthIssuer(apiUrl),
+			authorization_endpoint: `${oauthIssuer(apiUrl)}${OAUTH_PROVIDER.paths.authorize}`,
+			registration_endpoint: `${oauthIssuer(apiUrl)}/oauth2/register`,
+		});
 	});
 
 	it("sends a visitor without a session to the CRM sign-in page", async () => {
@@ -158,11 +175,26 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 		expect(login.searchParams.get("client_id")).toBe(clientId);
 	});
 
+	it("continues to the consent page once the visitor has signed in", async () => {
+		const response = await authorize(pkce().challenge, false);
+		const login = locationOf(response);
+		const resumed = await request(server)
+			.get(`${AUTH}${OAUTH_PROVIDER.paths.authorize}${login.search}`)
+			.set("cookie", cookie);
+		const next = locationOf(resumed);
+		expect(`${next.origin}${next.pathname}`).toBe(
+			new URL(OAUTH_PROVIDER.pages.consent, appUrl).toString(),
+		);
+	});
+
 	it("asks a signed-in user to allow the app before it gets a code", async () => {
 		const response = await authorize(pkce().challenge, true);
 		const next = locationOf(response);
 		expect(next.host).not.toBe("client.example");
-		expect(next.searchParams.get("consent_code")).toBeString();
+		expect(`${next.origin}${next.pathname}`).toBe(
+			new URL(OAUTH_PROVIDER.pages.consent, appUrl).toString(),
+		);
+		expect(next.searchParams.get("sig")).toBeString();
 	});
 
 	it("names the app and where it sends the user on the consent screen", async () => {
@@ -178,14 +210,14 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 	});
 
 	it("sends a refusal back to the app as access_denied", async () => {
-		const code = await consentCode(pkce().challenge);
+		const oauthQuery = await consentQuery(pkce().challenge);
 		const response = await request(server)
-			.post(`/api/auth${OAUTH_PROVIDER.paths.consent}`)
+			.post(`${AUTH}${OAUTH_PROVIDER.paths.consent}`)
 			.set("cookie", cookie)
 			.set("origin", apiUrl)
-			.send({ accept: false, consent_code: code })
+			.send({ accept: false, oauth_query: oauthQuery })
 			.expect(200);
-		const back = new URL(consented.parse(response.body).redirectURI);
+		const back = new URL(consented.parse(response.body).url);
 		expect(back.searchParams.get("error")).toBe("access_denied");
 		expect(back.searchParams.get("code")).toBeNull();
 	});
@@ -232,12 +264,13 @@ describe("signing an AI app in with OAuth (e2e)", () => {
 	it("swaps a refresh token for a working access token", async () => {
 		const first = await grant();
 		const refreshed = await request(server)
-			.post("/api/auth/mcp/token")
+			.post(`${AUTH}/oauth2/token`)
 			.type("form")
 			.send({
 				grant_type: "refresh_token",
 				refresh_token: first.refresh_token,
 				client_id: clientId,
+				resource: RESOURCE,
 			})
 			.expect(200);
 		const { access_token } = tokens.parse(refreshed.body);

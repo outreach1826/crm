@@ -1,6 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { auth, type Session } from "@crm/auth/auth";
+import { env } from "@crm/auth/env";
 import { OAUTH_PROVIDER } from "@crm/auth/oauth-paths";
+import { verifyOAuthAccessToken } from "@crm/auth/oauth-token";
 import { db } from "@crm/db";
 import { Injectable } from "@nestjs/common";
 import { fromNodeHeaders } from "better-auth/node";
@@ -8,10 +10,12 @@ import type { Request } from "express";
 import type { ContextOptions, TRPCContext } from "nestjs-trpc";
 import type { BaseTrpcContext } from "./context.types";
 
-const BEARER = /^Bearer\s+\S+$/i;
+const BEARER_TOKEN = /^Bearer\s+(\S+)$/i;
+
+const jwksCacheKey = {};
 
 export function hasBearerToken(req: Request | undefined): boolean {
-	return BEARER.test(req?.headers.authorization ?? "");
+	return BEARER_TOKEN.test(req?.headers.authorization ?? "");
 }
 
 export function isFromMcpServer(
@@ -39,8 +43,21 @@ async function oauthSession(headers: Headers): Promise<Session | null> {
 		return null;
 	}
 
-	const token = await auth.api.getMcpSession({ headers });
-	if (!token?.userId) return null;
+	const bearer = BEARER_TOKEN.exec(headers.get("authorization") ?? "")?.[1];
+	if (!bearer) return null;
+
+	const token = await verifyOAuthAccessToken(bearer, {
+		publicApiUrl: env.apiUrl,
+		jwks: () => auth.api.getJwks(),
+		jwksCacheKey,
+	});
+	if (!token) return null;
+
+	const consent = await db.oauthConsent.findFirst({
+		where: { userId: token.userId, clientId: token.clientId },
+		select: { id: true },
+	});
+	if (!consent) return null;
 
 	const user = await db.user.findUnique({ where: { id: token.userId } });
 	if (!user) return null;
@@ -52,7 +69,7 @@ async function oauthSession(headers: Headers): Promise<Session | null> {
 			id: `oauth:${token.clientId}:${user.id}`,
 			token: "",
 			userId: user.id,
-			expiresAt: token.accessTokenExpiresAt,
+			expiresAt: token.expiresAt,
 			createdAt: now,
 			updatedAt: now,
 			ipAddress: null,

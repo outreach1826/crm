@@ -23,20 +23,17 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  ownedCompanies    Company[]           @relation("CompanyOwner")
-  ownedContacts     Contact[]           @relation("ContactOwner")
-  ownedDeals        Deal[]              @relation("DealOwner")
-  activities        Activity[]          @relation("ActivityAuthor")
-  mailboxSyncs      MailboxSync[]
-  factDecisions     ContactFact[]       @relation("FactDecider")
-  conversations     AgentConversation[] @relation("ConversationOwner")
-  fieldValues       FieldValue[]        @relation("FieldValueUser")
-  savedViews        SavedView[]         @relation("SavedViewOwner")
-  pushDevices       PushSubscription[]  @relation("PushSubscriptionOwner")
-  oauthApplications OauthApplication[]  @relation("OauthApplicationOwner")
-  oauthAccessTokens OauthAccessToken[]  @relation("OauthAccessTokenOwner")
-  oauthConsents     OauthConsent[]      @relation("OauthConsentOwner")
-  researchKey       ResearchKey?        @relation("ResearchKeyOwner")
+  ownedCompanies Company[]           @relation("CompanyOwner")
+  ownedContacts  Contact[]           @relation("ContactOwner")
+  ownedDeals     Deal[]              @relation("DealOwner")
+  activities     Activity[]          @relation("ActivityAuthor")
+  mailboxSyncs   MailboxSync[]
+  factDecisions  ContactFact[]       @relation("FactDecider")
+  conversations  AgentConversation[] @relation("ConversationOwner")
+  fieldValues    FieldValue[]        @relation("FieldValueUser")
+  savedViews     SavedView[]         @relation("SavedViewOwner")
+  pushDevices    PushSubscription[]  @relation("PushSubscriptionOwner")
+  researchKey    ResearchKey?        @relation("ResearchKeyOwner")
 
   createdAgentDefinitions AgentDefinition[]             @relation("AgentDefinitionCreator")
   createdAgentVersions    AgentVersion[]                @relation("AgentVersionCreator")
@@ -56,6 +53,11 @@ model User {
   ssoproviders SsoProvider[]
 
   apiKeys Apikey[]
+
+  oauthclients       OauthClient[]
+  oauthrefreshtokens OauthRefreshToken[]
+  oauthaccesstokens  OauthAccessToken[]
+  oauthconsents      OauthConsent[]
 
   @@unique([email])
   @@map("user")
@@ -127,6 +129,9 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   activeOrganizationId String?
+
+  oauthrefreshtokens OauthRefreshToken[]
+  oauthaccesstokens  OauthAccessToken[]
 
   @@unique([token])
   @@index([userId])
@@ -1744,71 +1749,6 @@ model PushSubscription {
   @@map("pushSubscription")
 }
 
-model OauthApplication {
-  id           String   @id
-  name         String?
-  icon         String?
-  metadata     String?
-  clientId     String   @unique
-  clientSecret String?
-  redirectUrls String
-  type         String
-  disabled     Boolean? @default(false)
-
-  userId String?
-  user   User?   @relation("OauthApplicationOwner", fields: [userId], references: [id], onDelete: Cascade)
-
-  accessTokens OauthAccessToken[]
-  consents     OauthConsent[]
-
-  createdAt DateTime
-  updatedAt DateTime
-
-  @@index([userId])
-  @@map("oauthApplication")
-}
-
-model OauthAccessToken {
-  id                    String   @id
-  accessToken           String   @unique
-  refreshToken          String   @unique
-  accessTokenExpiresAt  DateTime
-  refreshTokenExpiresAt DateTime
-  scopes                String
-
-  clientId String
-  client   OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-
-  userId String?
-  user   User?   @relation("OauthAccessTokenOwner", fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime
-  updatedAt DateTime
-
-  @@index([clientId])
-  @@index([userId])
-  @@map("oauthAccessToken")
-}
-
-model OauthConsent {
-  id           String  @id
-  scopes       String
-  consentGiven Boolean
-
-  clientId String
-  client   OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-
-  userId String
-  user   User   @relation("OauthConsentOwner", fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime
-  updatedAt DateTime
-
-  @@index([clientId])
-  @@index([userId])
-  @@map("oauthConsent")
-}
-
 model ResearchKey {
   id     String @id @default(cuid())
   apiKey String
@@ -1820,4 +1760,188 @@ model ResearchKey {
   updatedAt DateTime @updatedAt
 
   @@map("researchKey")
+}
+
+model Jwks {
+  id         String    @id
+  publicKey  String
+  privateKey String
+  createdAt  DateTime
+  expiresAt  DateTime?
+  alg        String?
+  crv        String?
+
+  @@map("jwks")
+}
+
+model OauthClient {
+  id                               String                @id
+  clientId                         String
+  clientSecret                     String?
+  clientDiscoveryId                String?
+  disabled                         Boolean?              @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?
+  scopes                           String[]
+  clientCredentialsScopes          String[]              @default([])
+  userId                           String?
+  user                             User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?
+  uri                              String?
+  icon                             String?
+  contacts                         String[]
+  tos                              String?
+  policy                           String?
+  softwareId                       String?
+  softwareVersion                  String?
+  softwareStatement                String?
+  redirectUris                     String[]
+  postLogoutRedirectUris           String[]
+  backchannelLogoutUri             String?
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?
+  applicationType                  String?
+  jwks                             String?
+  jwksUri                          String?
+  grantTypes                       String[]
+  responseTypes                    String[]
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean?              @default(false)
+  referenceId                      String?
+  metadata                         Json?
+  oauthclientresources             OauthClientResource[]
+  oauthrefreshtokens               OauthRefreshToken[]
+  oauthaccesstokens                OauthAccessToken[]
+  oauthconsents                    OauthConsent[]
+
+  @@unique([clientId])
+  @@index([userId])
+  @@map("oauthClient")
+}
+
+model OauthResource {
+  id                            String                @id
+  identifier                    String
+  name                          String
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?
+  signingKeyId                  String?
+  allowedScopes                 String[]
+  customClaims                  Json?
+  dpopBoundAccessTokensRequired Boolean?              @default(false)
+  disabled                      Boolean?              @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?                  @default(1)
+  metadata                      Json?
+  oauthclientresources          OauthClientResource[]
+
+  @@unique([identifier])
+  @@map("oauthResource")
+}
+
+model OauthClientResource {
+  id            String        @id
+  clientId      String
+  oauthclient   OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceId    String
+  oauthresource OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+  metadata      Json?
+  createdAt     DateTime?
+
+  @@unique([clientId, resourceId], map: "oauthClientResource_clientId_resourceId_uidx")
+  @@index([clientId])
+  @@index([resourceId])
+  @@map("oauthClientResource")
+}
+
+model OauthRefreshToken {
+  id                      String             @id
+  token                   String
+  clientId                String
+  oauthclient             OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  confirmation            Json?
+  scopes                  String[]
+  oauthaccesstokens       OauthAccessToken[]
+
+  @@unique([token])
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@map("oauthRefreshToken")
+}
+
+model OauthAccessToken {
+  id                      String             @id
+  token                   String
+  clientId                String
+  oauthclient             OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String?
+  user                    User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  refreshId               String?
+  oauthrefreshtoken       OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  confirmation            Json?
+  scopes                  String[]
+
+  @@unique([token])
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+  @@map("oauthAccessToken")
+}
+
+model OauthConsent {
+  id                      String      @id
+  clientId                String
+  oauthclient             OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId                  String?
+  user                    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  scopes                  String[]
+  createdAt               DateTime
+  updatedAt               DateTime
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauthConsent")
+}
+
+model OauthClientAssertion {
+  id        String   @id
+  expiresAt DateTime
+
+  @@map("oauthClientAssertion")
 }

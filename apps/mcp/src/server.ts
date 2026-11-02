@@ -1,4 +1,5 @@
 import { API_KEY_HEADER } from "@crm/auth/api-keys";
+import { oauthIssuer } from "@crm/auth/oauth-paths";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { McpConfig } from "./config";
@@ -15,7 +16,7 @@ function protectedResource(config: McpConfig): Response {
 	return Response.json(
 		{
 			resource: `${config.publicUrl}${MCP.paths.mcp}`,
-			authorization_servers: [config.publicUrl],
+			authorization_servers: [oauthIssuer(config.publicUrl)],
 			scopes_supported: MCP.scopes,
 			bearer_methods_supported: ["header"],
 			resource_name: MCP.resourceName,
@@ -107,6 +108,7 @@ export function createHandler(options: {
 			if (!config.bridgeSecret) return unauthorized(config, true);
 			const live = await isLiveOAuthToken({
 				apiUrl: config.apiUrl,
+				publicUrl: config.publicUrl,
 				token: credential.value,
 				fetch: options.fetch,
 			}).catch(() => false);
