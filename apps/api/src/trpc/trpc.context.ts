@@ -83,7 +83,8 @@ async function cookieSession(
 	res: Response | undefined,
 ): Promise<Session | null> {
 	const result = await auth.api.getSession({ headers, returnHeaders: true });
-	const renewed = result.headers.getSetCookie();
+	const renewed =
+		result.headers instanceof Headers ? result.headers.getSetCookie() : [];
 	if (res && !res.headersSent && renewed.length > 0) {
 		res.append("set-cookie", renewed);
 	}

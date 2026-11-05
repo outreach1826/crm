@@ -57,6 +57,21 @@ describe("keeping a busy user signed in (e2e)", () => {
 		await app.close();
 	});
 
+	it("still signs in an API key, which carries no session cookie", async () => {
+		const created = await request(server)
+			.post("/api/auth/api-key/create")
+			.set("cookie", sessionCookie)
+			.set("origin", apiUrl)
+			.send({ name: "renewal test key" })
+			.expect(200);
+		const key = String(created.body.key);
+
+		await request(server)
+			.get("/api/trpc/users.me")
+			.set("x-api-key", key)
+			.expect(200);
+	});
+
 	it("sends the browser a renewed session cookie once the session is a day old", async () => {
 		const twoDaysAgo = new Date(Date.now() - 2 * DAY_MS);
 		await db.session.updateMany({
