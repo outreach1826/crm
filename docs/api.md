@@ -191,6 +191,15 @@ Two rules follow for the serverless build:
   mailbox-wide delta, so the Outlook cursor is the last `receivedDateTime` seen,
   re-read with a one-second overlap; `rfcMessageId` is unique, so the overlap costs a
   duplicate fetch and never a duplicate row.
+- **Gmail also imports the last 12 months once, oldest first.** `GmailBackfillService`
+  runs after the live step in the same tick. It walks one-week windows forward from
+  `backfillFrom` to `backfillUntil` (the first run), and keeps its page token and
+  offset on the `MailboxSync` row, so a rate limit or the per-tick cap resumes at the
+  same message. Limits live in `google/gmail-sync.config.ts`. A rate limit or a revoked
+  token stops the step and keeps the place; a deleted message is skipped. The import
+  goes through `ThreadWriterService.store`, so it files mail by the same rules as the
+  live sync. Disconnecting deletes the row, so a reconnect imports again and skips
+  what is already stored.
 - **Microsoft has no token-revocation endpoint.** `revoke` clears the columns and the
   UI says the consent itself is removed in the user's Microsoft account. Google's still
   posts to `oauth2.googleapis.com/revoke` and refuses to clear if that fails.

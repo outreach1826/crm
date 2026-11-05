@@ -10,6 +10,13 @@ import type { SyncSource } from "./mailbox.constants";
 
 export const SYNC_LEASE_MS = 300_000;
 
+export type BackfillProgress = {
+	from: Date;
+	until: Date;
+	pageToken: string | null;
+	offset: number;
+};
+
 @Injectable()
 export class SyncStateService {
 	private readonly logger = new Logger(SyncStateService.name);
@@ -100,6 +107,18 @@ export class SyncStateService {
 				lastSyncedAt: new Date(),
 				lastError: null,
 				retryAfter: null,
+			},
+		});
+	}
+
+	async saveBackfill(id: string, progress: BackfillProgress): Promise<void> {
+		await this.db.mailboxSync.update({
+			where: { id },
+			data: {
+				backfillFrom: progress.from,
+				backfillUntil: progress.until,
+				backfillPageToken: progress.pageToken,
+				backfillOffset: progress.offset,
 			},
 		});
 	}

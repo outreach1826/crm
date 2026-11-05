@@ -13,6 +13,7 @@ import {
 import { MailboxMatchService } from "../mailbox/mailbox-match.service";
 import { MailboxTokenService } from "../mailbox/mailbox-token.service";
 import { SyncStateService } from "../mailbox/sync-state.service";
+import { historyImportOf } from "./gmail-backfill.service";
 import type {
 	GoogleConnectionStatus,
 	GoogleSourceStatus,
@@ -58,6 +59,7 @@ export class GoogleConnectionService {
 				lastSyncedAt: row?.lastSyncedAt?.toISOString() ?? null,
 				lastError: row?.lastError ?? null,
 				autoCreate: row?.autoCreate ?? false,
+				historyImport: source === "gmail" && row ? historyImportOf(row) : null,
 			};
 		});
 

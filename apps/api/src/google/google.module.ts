@@ -6,6 +6,7 @@ import { CalendarClient } from "./calendar.client";
 import { CalendarSyncService } from "./calendar-sync.service";
 import { ConversationService } from "./conversation.service";
 import { GmailClient } from "./gmail.client";
+import { GmailBackfillService } from "./gmail-backfill.service";
 import { GmailSyncService } from "./gmail-sync.service";
 import { GoogleRouter } from "./google.router";
 import { GoogleConnectionService } from "./google-connection.service";
@@ -17,6 +18,7 @@ import { GoogleSyncService } from "./google-sync.service";
 		CalendarClient,
 		CalendarSyncService,
 		GmailClient,
+		GmailBackfillService,
 		GmailSyncService,
 		GoogleSyncService,
 		GoogleConnectionService,

@@ -35,6 +35,9 @@ export const googleSourceStatusOutput = z.object({
 	lastSyncedAt: z.string().nullable(),
 	lastError: z.string().nullable(),
 	autoCreate: z.boolean(),
+	historyImport: z
+		.object({ through: z.string(), done: z.boolean() })
+		.nullable(),
 });
 
 export const googleConnectionStatusOutput = z.object({

@@ -7,25 +7,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { InjectDatabase } from "../database/database.constants";
 import type { MatchContext } from "../mailbox/mailbox-match.service";
 import { MailboxTokenService } from "../mailbox/mailbox-token.service";
-import {
-	normaliseMessageId,
-	stripQuotedHistory,
-} from "../mailbox/message-text";
-import { parseAddress, parseAddressList } from "../mailbox/participants";
 import { SyncStateService } from "../mailbox/sync-state.service";
-import {
-	type IncomingMessage,
-	ThreadWriterService,
-} from "../mailbox/thread-writer.service";
-import { GmailClient, type GmailMessage } from "./gmail.client";
-import {
-	type GmailHeader,
-	header,
-	plainTextBody,
-	rootMessageId,
-} from "./gmail-mime";
-
-const MAX_MESSAGES_PER_TICK = 120;
+import { ThreadWriterService } from "../mailbox/thread-writer.service";
+import { GmailClient } from "./gmail.client";
+import { GmailBackfillService } from "./gmail-backfill.service";
+import { parseGmailMessage } from "./gmail-message";
+import { GMAIL_SYNC } from "./gmail-sync.config";
 
 export type GmailSyncOutcome = {
 	source: "gmail";
@@ -46,6 +33,7 @@ export class GmailSyncService {
 		private readonly tokens: MailboxTokenService,
 		private readonly state: SyncStateService,
 		private readonly threads: ThreadWriterService,
+		private readonly backfill: GmailBackfillService,
 	) {}
 
 	async sync(row: MailboxSync): Promise<GmailSyncOutcome> {
@@ -88,11 +76,18 @@ export class GmailSyncService {
 			};
 		}
 
-		if (!row.cursor) {
-			return this.start(row, profile.data.historyId ?? null);
-		}
+		const forward = row.cursor
+			? await this.incremental(row, token.accessToken, mailbox, row.cursor)
+			: await this.start(row, profile.data.historyId ?? null);
+		if (forward.status !== "synced") return forward;
 
-		return this.incremental(row, token.accessToken, mailbox, row.cursor);
+		const past = await this.backfill.run(row, token.accessToken, mailbox);
+		if (past.outcome !== "ok") return this.handleFailure(row, past);
+
+		return {
+			...forward,
+			messagesWritten: (forward.messagesWritten ?? 0) + past.written,
+		};
 	}
 
 	private async start(
@@ -203,7 +198,7 @@ export class GmailSyncService {
 		);
 
 		const pending = ids.filter((id) => !seen.has(id));
-		const batch = pending.slice(0, MAX_MESSAGES_PER_TICK);
+		const batch = pending.slice(0, GMAIL_SYNC.incremental.messagesPerTick);
 		const remaining = pending.length - batch.length;
 
 		if (batch.length === 0) return { written: 0, remaining };
@@ -216,7 +211,7 @@ export class GmailSyncService {
 			const message = await this.gmail.getMessage(accessToken, id);
 			if (message.outcome !== "ok") continue;
 
-			const parsed = this.parse(message.data);
+			const parsed = parseGmailMessage(message.data);
 			if (!parsed) continue;
 
 			const stored = await this.threads.store(
@@ -229,62 +224,6 @@ export class GmailSyncService {
 		}
 
 		return { written, remaining };
-	}
-
-	private parse(message: GmailMessage): IncomingMessage | null {
-		const headers = message.payload?.headers;
-
-		const rawMessageId = header(headers, "message-id");
-		if (!rawMessageId) return null;
-
-		const from = parseAddress(header(headers, "from") ?? "");
-		if (!from) return null;
-
-		const sentAt = this.sentAt(message, headers);
-		if (!sentAt) return null;
-
-		const rootId = rootMessageId(headers) ?? normaliseMessageId(rawMessageId);
-
-		const to = parseAddressList(header(headers, "to")).map((person) => ({
-			email: person.email,
-			name: person.name,
-			kind: "to" as const,
-		}));
-
-		const cc = parseAddressList(header(headers, "cc")).map((person) => ({
-			email: person.email,
-			name: person.name,
-			kind: "cc" as const,
-		}));
-
-		const body = stripQuotedHistory(plainTextBody(message.payload));
-
-		return {
-			rfcMessageId: normaliseMessageId(rawMessageId),
-			rootId,
-			subject: header(headers, "subject"),
-			from,
-			recipients: [...to, ...cc],
-			body,
-			sentAt,
-			gmailMessageId: message.id ?? null,
-		};
-	}
-
-	private sentAt(
-		message: GmailMessage,
-		headers: readonly GmailHeader[] | undefined,
-	): Date | null {
-		if (message.internalDate) {
-			const at = new Date(Number(message.internalDate));
-			if (!Number.isNaN(at.getTime())) return at;
-		}
-
-		const raw = header(headers, "date");
-		if (!raw) return null;
-
-		const at = new Date(raw);
-		return Number.isNaN(at.getTime()) ? null : at;
 	}
 
 	private async handleFailure(

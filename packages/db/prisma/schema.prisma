@@ -1313,6 +1313,11 @@ model MailboxSync {
   retryAfter   DateTime?
   autoCreate   Boolean          @default(false)
 
+  backfillFrom      DateTime?
+  backfillUntil     DateTime?
+  backfillPageToken String?
+  backfillOffset    Int       @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

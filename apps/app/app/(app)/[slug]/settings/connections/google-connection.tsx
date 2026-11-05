@@ -41,7 +41,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { LocalRelativeTime } from "@/components/local-date-time";
+import { LocalDay, LocalRelativeTime } from "@/components/local-date-time";
 import { isSyncing, SYNC_POLL_MS } from "@/lib/sync-status";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
@@ -291,6 +291,9 @@ export function GoogleConnection({
 		.at(-1);
 
 	const healthy = failing.length === 0 && hasRefreshToken;
+	const historyImport = sources.find(
+		(source) => source.historyImport && !source.historyImport.done,
+	)?.historyImport;
 
 	return (
 		<Card>
@@ -371,6 +374,13 @@ export function GoogleConnection({
 						)}
 					</p>
 				)}
+
+				{historyImport ? (
+					<p className="text-muted-foreground text-xs">
+						Importing the last 12 months of email. Done up to{" "}
+						<LocalDay date={historyImport.through} />.
+					</p>
+				) : null}
 
 				{sources.map((source) => {
 					const copy = SOURCES[source.source];
