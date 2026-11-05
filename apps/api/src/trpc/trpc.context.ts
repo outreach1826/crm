@@ -6,7 +6,7 @@ import { verifyOAuthAccessToken } from "@crm/auth/oauth-token";
 import { db } from "@crm/db";
 import { Injectable } from "@nestjs/common";
 import { fromNodeHeaders } from "better-auth/node";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import type { ContextOptions, TRPCContext } from "nestjs-trpc";
 import type { BaseTrpcContext } from "./context.types";
 
@@ -78,15 +78,28 @@ async function oauthSession(headers: Headers): Promise<Session | null> {
 	};
 }
 
+async function cookieSession(
+	headers: Headers,
+	res: Response | undefined,
+): Promise<Session | null> {
+	const result = await auth.api.getSession({ headers, returnHeaders: true });
+	const renewed = result.headers.getSetCookie();
+	if (res && !res.headersSent && renewed.length > 0) {
+		res.append("set-cookie", renewed);
+	}
+	return result.response;
+}
+
 export async function createBaseTrpcContext(
 	req: Request | undefined,
+	res?: Response,
 ): Promise<BaseTrpcContext> {
 	if (!req) return { req, session: null };
 
 	const headers = fromNodeHeaders(req.headers);
 	const session = hasBearerToken(req)
 		? await oauthSession(headers).catch(() => null)
-		: await auth.api.getSession({ headers }).catch(() => null);
+		: await cookieSession(headers, res).catch(() => null);
 	return { req, session };
 }
 
@@ -94,6 +107,7 @@ export async function createBaseTrpcContext(
 export class TrpcContext implements TRPCContext {
 	async create(opts: ContextOptions): Promise<BaseTrpcContext> {
 		const req = "req" in opts ? opts.req : undefined;
-		return createBaseTrpcContext(req);
+		const res = "res" in opts ? opts.res : undefined;
+		return createBaseTrpcContext(req, res);
 	}
 }
