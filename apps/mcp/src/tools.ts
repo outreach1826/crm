@@ -34,6 +34,38 @@ const archived = z
 	.boolean()
 	.optional()
 	.describe("true lists only archived records. Default false.");
+const emailPerson = z.object({
+	email: z.string().min(3).describe("Email address."),
+	name: z.string().nullish().describe("Display name, if the header has one."),
+});
+const importedEmail = z.object({
+	dealId: id.describe("The deal the email belongs to. It must exist."),
+	mailbox: z
+		.string()
+		.min(3)
+		.describe("The team Gmail account it came from, e.g. david@ or supply@."),
+	gmailMessageId: z.string().min(1).describe("Gmail's message id."),
+	gmailThreadId: z.string().min(1).describe("Gmail's thread id."),
+	rfcMessageId: z
+		.string()
+		.nullish()
+		.describe(
+			"The Message-ID header, if known. It merges copies of one email.",
+		),
+	from: emailPerson,
+	to: z.array(emailPerson).optional(),
+	cc: z.array(emailPerson).optional(),
+	subject: z.string().nullish(),
+	body: z.string().optional().describe("The full plain-text body."),
+	sentAt: z
+		.string()
+		.describe(
+			"The original send time, ISO 8601 with offset, e.g. 2026-03-04T15:20:00Z.",
+		),
+	direction: z
+		.enum(["sent", "received"])
+		.describe("sent when the mailbox owner sent it, received otherwise."),
+});
 const amount = z
 	.number()
 	.min(0)
@@ -105,6 +137,27 @@ async function run(action: () => Promise<Json>): Promise<CallToolResult> {
 		}
 		return refuse("The CRM did not answer.");
 	}
+}
+
+function personBody(person: z.infer<typeof emailPerson>): Json {
+	return { email: person.email, name: person.name ?? null };
+}
+
+function emailBody(message: z.infer<typeof importedEmail>): Json {
+	return {
+		dealId: message.dealId,
+		mailbox: message.mailbox,
+		gmailMessageId: message.gmailMessageId,
+		gmailThreadId: message.gmailThreadId,
+		rfcMessageId: message.rfcMessageId ?? null,
+		from: personBody(message.from),
+		to: (message.to ?? []).map(personBody),
+		cc: (message.cc ?? []).map(personBody),
+		subject: message.subject ?? null,
+		body: message.body ?? "",
+		sentAt: message.sentAt,
+		direction: message.direction,
+	};
 }
 
 function changes<T extends Record<string, Json | undefined>>(
@@ -412,6 +465,63 @@ export function registerTools(
 				}),
 			);
 		},
+	);
+
+	server.registerTool(
+		"list_deal_emails",
+		{
+			title: "List a deal's emails",
+			description:
+				"Returns the emails in a deal's Emails tab, grouped by thread. Threads and the messages inside them are oldest first. Each message has the mailbox, Gmail message and thread ids, sender, to, cc, subject, full body, send time and direction (sent or received).",
+			inputSchema: {
+				dealId: id,
+				page,
+				pageSize: z
+					.number()
+					.int()
+					.min(1)
+					.max(MCP.dealEmails.threads.max)
+					.optional()
+					.describe(
+						`Threads per page. Default ${MCP.dealEmails.threads.default}.`,
+					),
+			},
+			annotations: READ,
+		},
+		async ({ dealId, page, pageSize }) =>
+			run(() =>
+				crm.call({
+					method: "GET",
+					path: `/deals/${encodeURIComponent(dealId)}/emails`,
+					query: {
+						page,
+						pageSize: pageSize ?? MCP.dealEmails.threads.default,
+					},
+				}),
+			),
+	);
+
+	server.registerTool(
+		"import_deal_emails",
+		{
+			title: "Import emails onto deals",
+			description: `Files existing Gmail messages on deals, for a backfill of sent and received mail. Up to ${MCP.dealEmails.importBatch.max} messages per call. Each message goes on the deal you name; the deal must exist, and the import never creates a deal, company or contact. A message already imported from the same mailbox with the same Gmail message id is skipped. Messages of one Gmail thread are grouped. The import keeps the original send times, does not move follow-up clocks and sends no email. The answer has imported, skipped and failed counts and one result per message.`,
+			inputSchema: {
+				messages: z
+					.array(importedEmail)
+					.min(1)
+					.max(MCP.dealEmails.importBatch.max),
+			},
+			annotations: WRITE,
+		},
+		async ({ messages }) =>
+			run(() =>
+				crm.call({
+					method: "POST",
+					path: "/deal-emails/import",
+					body: { messages: messages.map(emailBody) },
+				}),
+			),
 	);
 
 	server.registerTool(

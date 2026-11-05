@@ -21,4 +21,8 @@ export const MCP = {
 	requestTimeoutMs: 30_000,
 	pageSize: { default: 25, max: 100 },
 	timelineLimit: { default: 20, max: 100 },
+	dealEmails: {
+		threads: { default: 20, max: 50 },
+		importBatch: { max: 50 },
+	},
 } as const;

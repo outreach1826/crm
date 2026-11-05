@@ -1358,7 +1358,9 @@ model EmailMessage {
 
   rfcMessageId     String  @unique
   syncedByUserId   String?
+  mailbox          String?
   gmailMessageId   String?
+  gmailThreadId    String?
   outlookMessageId String?
   outlookWebLink   String?
 
@@ -1373,6 +1375,8 @@ model EmailMessage {
 
   createdAt DateTime @default(now())
 
+  @@unique([mailbox, gmailMessageId])
+  @@index([mailbox, gmailThreadId])
   @@index([threadId, sentAt])
   @@map("emailMessage")
 }

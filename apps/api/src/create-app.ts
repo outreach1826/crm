@@ -17,7 +17,7 @@ import {
 } from "trpc-to-openapi";
 import { AppModule } from "./app.module";
 import { ContextLogger } from "./logging/context-logger";
-import { REST_BRIDGE_PATH } from "./trpc/openapi";
+import { REST_BRIDGE_MAX_BODY_BYTES, REST_BRIDGE_PATH } from "./trpc/openapi";
 import { createBaseTrpcContext } from "./trpc/trpc.context";
 
 export async function createApp(): Promise<NestExpressApplication> {
@@ -119,6 +119,7 @@ export async function createApp(): Promise<NestExpressApplication> {
 
 	restBridge = createOpenApiExpressMiddleware({
 		router: appRouter,
+		maxBodySize: REST_BRIDGE_MAX_BODY_BYTES,
 		createContext: ({ req, res }) => createBaseTrpcContext(req, res),
 	});
 

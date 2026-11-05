@@ -17,6 +17,7 @@ import { CrmModule } from "./crm/crm.module";
 import { CurrencyModule } from "./currency/currency.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DatabaseModule } from "./database/database.module";
+import { DealEmailsModule } from "./deal-emails/deal-emails.module";
 import { DealsModule } from "./deals/deals.module";
 import { EnrichmentModule } from "./enrichment/enrichment.module";
 import { FieldsModule } from "./fields/fields.module";
@@ -60,6 +61,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		UsersModule,
 		ApiKeysModule,
 		OAuthClientsModule,
+		DealEmailsModule,
 		FreshnessModule,
 		CompaniesModule,
 		ContactsModule,

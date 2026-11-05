@@ -231,6 +231,33 @@ contact on the deal. The sync files a thread on a contact and company, never on 
 deal, because one company can have several deals. Notes, calls and tasks still show
 only where they were logged. The MCP `get_timeline` tool reads the same procedure.
 
+## Importing mail onto a deal
+
+`dealEmails.import` (`POST /rest/deal-emails/import`) files Gmail messages that an AI
+read from a team mailbox. `dealEmails.list` (`GET /rest/deals/{dealId}/emails`) reads
+the deal's Emails tab back: threads by first message, messages by send time, both
+oldest first.
+
+- **Deduplication is mailbox + Gmail message id**, a unique key on `EmailMessage`.
+  The live sync writes `mailbox` and `gmailThreadId` too, and checks that key before it
+  stores, so a message imported first is never stored twice. A message with the same
+  `rfcMessageId` from the other mailbox is skipped, so a mail from `david@` to
+  `supply@` shows once.
+- **Grouping is mailbox + Gmail thread id.** A new thread is keyed
+  `gmail-thread:<mailbox>:<threadId>`; a later message of that thread joins the
+  thread that already holds a sibling.
+- **It never creates a deal, company or contact.** A missing or archived deal, or a
+  mailbox outside the team's domains, fails that one message with a reason.
+- **It does not move follow-up clocks.** It never calls `ActivityStampService.touch`,
+  and the `EMAIL` activity's `createdAt` is the thread's last message time, so a later
+  `recompute` counts the email at the time it was sent, never at the time of import.
+  The 12-month Gmail import passes `historical: true` to `ThreadWriterService.store`
+  for the same reason.
+- **It sends nothing.** No mail client is called.
+- **Each message is its own result**, `imported`, `skipped` or `failed`, and the
+  answer counts each. A batch is at most 50 messages; the REST bridge accepts 12 MB
+  (`REST_BRIDGE_MAX_BODY_BYTES`) so full bodies fit.
+
 ## People on a deal
 
 `DealContact` is the join, and `deals.attachContact` / `detachContact` /

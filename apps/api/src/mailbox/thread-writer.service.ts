@@ -27,6 +27,7 @@ export type IncomingMessage = {
 	body: string;
 	sentAt: Date;
 	gmailMessageId?: string | null;
+	gmailThreadId?: string | null;
 	outlookMessageId?: string | null;
 	outlookWebLink?: string | null;
 };
@@ -58,7 +59,7 @@ export class ThreadWriterService {
 
 	async store(
 		row: MailboxSync,
-		options: { mailbox: string; origin: SyncSource },
+		options: { mailbox: string; origin: SyncSource; historical?: boolean },
 		parsed: IncomingMessage,
 		context: MatchContext,
 	): Promise<boolean> {
@@ -76,6 +77,9 @@ export class ThreadWriterService {
 			},
 		});
 		if (existing?.thread.activity) return false;
+		if (!existing && (await this.importedAlready(options.mailbox, parsed))) {
+			return false;
+		}
 
 		const repair = existing !== null;
 		const participants = [parsed.from, ...parsed.recipients];
@@ -145,7 +149,9 @@ export class ThreadWriterService {
 							threadId: record.id,
 							rfcMessageId: parsed.rfcMessageId,
 							syncedByUserId: row.userId,
+							mailbox: options.mailbox,
 							gmailMessageId: parsed.gmailMessageId ?? null,
+							gmailThreadId: parsed.gmailThreadId ?? null,
 							outlookMessageId: parsed.outlookMessageId ?? null,
 							outlookWebLink: parsed.outlookWebLink ?? null,
 							direction: outbound
@@ -189,6 +195,7 @@ export class ThreadWriterService {
 					companyId,
 					contactId,
 					origin: options.origin,
+					historical: options.historical ?? false,
 				});
 			});
 		} catch (error) {
@@ -199,6 +206,25 @@ export class ThreadWriterService {
 		await this.touch({ companyId, contactId }, occurredAt, parsed.rfcMessageId);
 
 		return !repair;
+	}
+
+	private async importedAlready(
+		mailbox: string,
+		parsed: IncomingMessage,
+	): Promise<boolean> {
+		if (!parsed.gmailMessageId) return false;
+
+		const found = await this.db.emailMessage.findUnique({
+			where: {
+				mailbox_gmailMessageId: {
+					mailbox,
+					gmailMessageId: parsed.gmailMessageId,
+				},
+			},
+			select: { id: true },
+		});
+
+		return found !== null;
 	}
 
 	private async storedElsewhere(
@@ -263,6 +289,7 @@ export class ThreadWriterService {
 			companyId: string | null;
 			contactId: string | null;
 			origin: SyncSource;
+			historical: boolean;
 		},
 	): Promise<Date> {
 		const activity = await tx.activity.upsert({
@@ -277,6 +304,7 @@ export class ThreadWriterService {
 				createdById: userId,
 				emailThreadId,
 				meta: { synced: true, source: summary.origin },
+				createdAt: summary.historical ? summary.lastMessageAt : undefined,
 			},
 			update: {
 				body: summary.snippet,

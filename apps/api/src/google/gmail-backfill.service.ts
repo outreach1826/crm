@@ -211,7 +211,7 @@ export class GmailBackfillService {
 
 		return this.threads.store(
 			row,
-			{ mailbox, origin: "gmail" },
+			{ mailbox, origin: "gmail", historical: true },
 			parsed,
 			context,
 		);

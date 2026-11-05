@@ -222,7 +222,7 @@ export class ActivitiesService {
 		);
 	}
 
-	private async dealAnchor(dealId: string): Promise<Prisma.ActivityWhereInput> {
+	async dealAnchor(dealId: string): Promise<Prisma.ActivityWhereInput> {
 		const deal = await this.db.deal.findUnique({
 			where: { id: dealId },
 			select: { companyId: true, contacts: { select: { contactId: true } } },

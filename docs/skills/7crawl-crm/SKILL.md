@@ -208,6 +208,26 @@ the follow-up list. End with the three things most worth doing next week.
 - Don't know if it is a company, person or deal: `search_everything`.
 - A company's full picture (people, deals): `get_company`.
 - A deal's history: `get_timeline` with `dealId`. Pass `nextCursor` for older items.
+- A deal's emails in full: `list_deal_emails` with `dealId`. Threads and messages are
+  oldest first, with sender, to, cc, body, send time and sent or received.
+
+## Backfilling email onto deals
+
+Use `import_deal_emails` when the user asks to put old Gmail conversations on deals.
+
+1. Find the deal first with `find_deals` or `search_everything`. Never create a deal
+   to hold email. When no deal fits, tell the user and leave the message out.
+2. Read the messages from the team mailbox (`david@` or `supply@`), sent and
+   received. Send up to 50 per call with the mailbox, Gmail message id, Gmail thread
+   id, Message-ID header when you have it, from, to, cc, subject, full body, original
+   send time and `sent` or `received`.
+3. Re-sending is safe. A message the CRM has from that mailbox is skipped, and the
+   other mailbox's copy of the same email is skipped by its Message-ID.
+4. Add the imported, skipped and failed counts of every call and report the totals.
+   List each failed message with its reason.
+
+The import never sends email and never moves a follow-up clock, so a backfill does not
+make a quiet deal look active.
 - Search tools return one page; pass `page` for more and say when you only looked at
   the first page.
 

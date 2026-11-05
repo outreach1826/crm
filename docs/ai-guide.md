@@ -90,6 +90,7 @@ No tool deletes data permanently. Only a person in the app can do that.
 | `find_contacts` / `get_contact` | Search people / read one in full. |
 | `search_everything` | Search companies, contacts and deals at once. |
 | `get_timeline` | Read the activities on one company, contact or deal. |
+| `list_deal_emails` | Read a deal's Emails tab: every thread and message, oldest first, with full bodies. |
 | `list_team` | Get user ids for owners. |
 | `my_open_tasks` | Read the open tasks of the key owner. |
 
@@ -103,6 +104,7 @@ No tool deletes data permanently. Only a person in the app can do that.
 | `move_deal_stage` | Move a deal to a stage. |
 | `link_contact_to_deal` | Put a person on a deal with a role. |
 | `log_activity` | Record a note, call, email or meeting. |
+| `import_deal_emails` | File existing Gmail messages on deals, up to 50 per call. |
 | `create_task` / `complete_task` | Add a to-do with a due date / mark it done. |
 | `archive_record` / `restore_record` | Hide or bring back a record. |
 
@@ -121,7 +123,13 @@ return `nextCursor`; pass it as `cursor` for older entries.
    use `log_activity` on the deal. This keeps the follow-up list correct.
 5. **Say what you changed.** After every write, tell the user the record and the
    change.
-6. **Errors are messages from the CRM.** Read them, fix the input and try again.
+6. **Importing email is a backfill, not a send.** `import_deal_emails` files mail
+   that already exists in Gmail on a deal that already exists. It never creates a
+   deal, company or contact, never sends anything and never moves a follow-up clock.
+   Give the team mailbox (`david@`, `supply@`), the Gmail message and thread ids, the
+   original send time and `sent` or `received`. Re-sending a message is safe: the CRM
+   skips what it already has. Report the imported, skipped and failed counts.
+7. **Errors are messages from the CRM.** Read them, fix the input and try again.
    Do not retry the same call without a change.
 
 ## Connecting

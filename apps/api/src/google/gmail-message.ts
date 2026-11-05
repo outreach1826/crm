@@ -51,6 +51,7 @@ export function parseGmailMessage(
 		body,
 		sentAt,
 		gmailMessageId: message.id ?? null,
+		gmailThreadId: message.threadId ?? null,
 	};
 }
 
